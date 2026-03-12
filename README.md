@@ -3,6 +3,7 @@ X.509-Certificate-Wed to issuance and management of X.509 digital certificates
 
 
 ## Project Layout
+```
 .
 ├── .github/                # GitHub Actions (CI/CD), issue templates
 ├── docs/                   # 1. PROJECT DOCUMENTATION
@@ -22,7 +23,7 @@ X.509-Certificate-Wed to issuance and management of X.509 digital certificates
 ├── .gitignore              # Exclude junk files, logs, and private keys
 ├── LICENSE                 # Source code license
 └── README.md               # Project overview (The Roadmap)
-
+```
 ## Tech Stack
 | Layer | Technologies |
 |-------|--------------|
