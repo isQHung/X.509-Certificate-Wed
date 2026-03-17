@@ -1,15 +1,11 @@
 # X.509-Certificate-Wed
+X.509-Certificate-Wed to issuance and management of X.509 digital certificates
 
-- This branch for PoC only, do not merge to main.
-- Each PoC is an independent project to test the feasibility of a feature. 
-- Each PoC needs to have installation instructions and purpose in the README.md.
-- PoCs are stored in the PoC folder. 
 
 ## Project Layout
 ```
 .
 ├── .github/                # GitHub Actions (CI/CD), issue templates
-├── PoC/                    # 0. PROJECT's Proof of Concept
 ├── docs/                   # 1. PROJECT DOCUMENTATION
 │   ├── standards/          # Working regulations, Git workflow, Coding conventions
 │   ├── design/             # Database schema, System Architecture, UI/UX Mockups
