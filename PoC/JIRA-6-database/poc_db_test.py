@@ -1,18 +1,13 @@
-import firebase_admin
-from firebase_admin import credentials, firestore
 from datetime import datetime, timezone
-
-# 1. Khởi tạo kết nối với Firestore bằng Service Account
-try:
-    cred = credentials.Certificate("serviceAccountKey.json")
-    firebase_admin.initialize_app(cred)
-    db = firestore.client()
-    print("[+] Kết nối Firebase thành công!")
-except Exception as e:
-    print(f"[-] Lỗi kết nối Firebase: {e}")
-    exit(1)
+# Import biến db từ file db.py cùng thư mục
+from db import db
 
 def run_database_poc():
+    # Kiểm tra xem db có khởi tạo thành công từ file db.py không
+    if db is None:
+        print("[-] Dừng chạy test vì không kết nối được database.")
+        return
+
     print("[*] Bắt đầu chạy test các collections...\n")
 
     # Test 1: Tạo tài liệu trong collection 'users'
@@ -27,7 +22,7 @@ def run_database_poc():
         }
     })
 
-    # Test 2: Tạo tài liệu trong collection 'certificate_requests' (Tự tạo ID)
+    # Test 2: Tạo tài liệu trong collection 'certificate_requests'
     print("[*] Đang ghi dữ liệu vào collection 'certificate_requests'...")
     csr_ref = db.collection('certificate_requests').document()
     csr_ref.set({
@@ -54,7 +49,7 @@ def run_database_poc():
     if user_doc.exists:
         print(f"    -> Dữ liệu lấy về: {user_doc.to_dict()}")
 
-    print("\n[+] Hoàn tất PoC! Bạn có thể lên Firebase Console để xem dữ liệu trực quan.")
+    print("\n[+] Hoàn tất PoC! Bạn có thể lên Firebase Console để xem dữ liệu.")
 
 if __name__ == '__main__':
     run_database_poc()
