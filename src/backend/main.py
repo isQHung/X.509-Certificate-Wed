@@ -9,6 +9,7 @@ app = Flask(__name__)
 def health():
     return jsonify({
         "status": "healthy",
+        "message": os.getenv("ENV_VAR"),
         "timestamp": datetime.now().isoformat()
     }), 200
 
