@@ -600,4 +600,5 @@ MigrationBackup/
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
 
+serviceAccountKey.json
 # End of https://www.toptal.com/developers/gitignore/api/python,vs,nextjs,react,certificates,venv,virtualenv
