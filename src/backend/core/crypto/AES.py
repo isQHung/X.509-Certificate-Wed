@@ -1,10 +1,8 @@
 import os
 import base64
-from dotenv import load_dotenv
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives import hashes
 
-load_dotenv()  
 
 class CryptoService:
     def __init__(self):
