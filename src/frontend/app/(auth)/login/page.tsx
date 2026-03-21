@@ -30,6 +30,7 @@ export default function LoginPage() {
 
             Cookies.set("token", idToken, { expires: 1, secure: true });
             Cookies.set("userRole", role, { expires: 1 });
+            localStorage.setItem("userRole", role || "");
 
             window.location.href = "/dashboard";
         } catch (error: unknown) {

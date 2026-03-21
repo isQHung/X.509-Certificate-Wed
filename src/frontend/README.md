@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Để chạy được code: 
+    cd src/frontend
+    pnpm install
+    .env.local tại thư mục src/frontend/ và copy đoạn code 
+    pnpm dev
 
-## Getting Started
+What was done:
+    Tích hợp Firebase Client SDK (Auth) và Firebase Admin SDK (Verify JWT).
 
-First, run the development server:
+    Middleware bảo mật: Xây dựng Middleware tại src/frontend/middleware.ts để chặn Route dựa trên ID Token (JWT) và Role từ Cookie.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev # using this
-# or
-bun dev
-```
+    RBAC (Role-Based Access Control): Phân quyền rõ rệt giữa ADMIN và CUSTOMER. Lưu trữ bền vững (Persistence) trên Firestore Database.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+    Profile Management: Tính năng đổi mật khẩu yêu cầu xác thực lại mật khẩu cũ (Re-authentication) theo chuẩn bảo mật.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+    Cấu trúc thư mục: Tổ chức lại code vào /lib (logic Firebase), /schema (định nghĩa interface) và Route Grouping (auth).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Testing:
+    Case 1: Đăng ký & Persistence
+        Bước 1: Truy cập /register, đăng ký một email mới (VD: test@gmail.com).
 
-## Learn More
+        Bước 2: Kiểm tra Firestore Collection users.
 
-To learn more about Next.js, take a look at the following resources:
+        Expected: Tài khoản được tạo thành công trên Auth và có bản ghi tương ứng trong Firestore với role mặc định là CUSTOMER
+    
+    Case 2: Kiểm tra trùng Email (Error 400)
+        Bước 1: Dùng lại email test@gmail.com để đăng ký lần nữa.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+        Expected: Hệ thống báo lỗi "400 Email already used" (Bắt lỗi auth/email-already-in-use).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+    Case 3: Phân quyền API - Forbidden (403)
+        Bước 1: Đăng nhập bằng tài khoản CUSTOMER. (1@1.com / 123456)
 
-## Deploy on Vercel
+        Bước 2: Dùng Postman hoặc gọi trực tiếp API /api/admin/check (mở console trong F12).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+        Expected: Trả về 403 Forbidden vì role không phải Admin
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+    Case 4: Phân quyền API - Success (200)
+        Bước 1: Đăng nhập bằng tài khoản ADMIN (Email admin@admin.com). Pass: 123456
+
+        Bước 2: Truy cập /dashboard/admin/users hoặc gọi API /api/admin/check (mở console trong F12).
+
+        Expected: Trả về 200 OK và truy cập được giao diện quản lý.
+
+    Case 5: Đổi mật khẩu (User Profile)
+        Mục tiêu: Xác nhận người dùng có thể tự cập nhật mật khẩu an toàn.
+
+        Các bước:
+
+        Truy cập /dashboard/profile/change-password.
+
+        Nhập mật khẩu hiện tại và mật khẩu mới (ít nhất 6 ký tự).
+
+        Nhấn Cập nhật.
+
+        Kết quả mong đợi: Hệ thống báo thành công. Đăng xuất và đăng nhập lại bằng mật khẩu mới thành công.
+
+    Case 6: Cấp quyền người dùng (Admin Management)
+        Mục tiêu: Xác nhận Admin có thể thay đổi quyền hạn (RBAC) của người dùng khác.
+
+        Các bước:
+
+        Đăng nhập tài khoản Admin, truy cập /dashboard/admin/users.
+
+        Tìm một User đang là CUSTOMER, nhấn nút "Đổi thành Admin".
+
+        Kiểm tra trực tiếp trên Firebase Firestore Console.
+
+        Kết quả mong đợi: Trường role của User đó trong Firestore chuyển từ "CUSTOMER" sang "ADMIN".
