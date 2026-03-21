@@ -3,6 +3,7 @@ import { auth } from "@/lib/firebase";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import Link from "next/link";
 import { useState } from "react";
+import Cookies from "js-cookie";
 
 export default function RegisterPage() {
     const [formData, setFormData] = useState({
@@ -24,9 +25,14 @@ export default function RegisterPage() {
                 displayName: formData.fullName,
             });
 
-            localStorage.setItem("userRole", "CUSTOMER");
-            localStorage.setItem("userName", formData.fullName);
-            window.location.href = "/dashboard";
+            if (userCredential.user) {
+                Cookies.set("userRole", "CUSTOMER", { expires: 1 });
+                Cookies.set("userName", formData.fullName, { expires: 1 });
+
+                localStorage.setItem("userRole", "CUSTOMER");
+                localStorage.setItem("userName", formData.fullName);
+                window.location.href = "/dashboard";
+            }
         } catch (error: unknown) {
             const message =
                 error instanceof Error ? error.message : String(error);

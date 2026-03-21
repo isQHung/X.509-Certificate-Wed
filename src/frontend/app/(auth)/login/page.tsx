@@ -5,6 +5,7 @@ import {
     signInWithEmailAndPassword,
     signInWithPopup,
 } from "firebase/auth";
+import Cookies from "js-cookie";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -12,7 +13,6 @@ export default function LoginPage() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
 
-    // Trong hàm handleLogin
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
@@ -27,12 +27,15 @@ export default function LoginPage() {
             // Sau này ở JIRA-31 ta sẽ lấy role từ Firestore/Database.
             const role = username === "admin@gmail.com" ? "ADMIN" : "CUSTOMER";
 
-            localStorage.setItem("userRole", role);
-            localStorage.setItem(
-                "userName",
-                user.displayName || user.email || "",
-            );
-            window.location.href = "/dashboard";
+            if (user) {
+                Cookies.set("userRole", role, { expires: 1 });
+                Cookies.set("userName", user.displayName || "", { expires: 1 });
+
+                localStorage.setItem("userRole", role);
+                localStorage.setItem("userName", user.displayName || "");
+
+                window.location.href = "/dashboard";
+            }
         } catch (error: unknown) {
             const message =
                 error instanceof Error ? error.message : String(error);
