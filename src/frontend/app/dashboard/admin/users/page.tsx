@@ -1,5 +1,6 @@
 "use client";
 import { db } from "@/lib/firebase";
+import { UserAccount } from "@/schema/user.schema";
 import {
     collection,
     doc,
@@ -9,14 +10,6 @@ import {
     updateDoc,
 } from "firebase/firestore";
 import { useEffect, useState } from "react";
-
-interface UserAccount {
-    uid: string;
-    email: string;
-    displayName: string;
-    role: "ADMIN" | "CUSTOMER";
-    createdAt: string;
-}
 
 export default function AdminUsersPage() {
     const [mounted, setMounted] = useState(false);

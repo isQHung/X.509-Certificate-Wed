@@ -43,10 +43,14 @@ export default function RegisterPage() {
                 localStorage.setItem("userName", formData.fullName);
                 window.location.href = "/dashboard";
             }
-        } catch (error: unknown) {
-            const message =
-                error instanceof Error ? error.message : String(error);
-            alert("Lỗi đăng ký: " + message);
+        } catch (error: any) {
+            if (error.code === "auth/email-already-in-use") {
+                alert(
+                    "Email already used. Vui lòng sử dụng email khác.",
+                );
+            } else {
+                alert("Đăng ký thất bại: " + error.message);
+            }
         }
     };
 

@@ -23,19 +23,15 @@ export default function LoginPage() {
                 password,
             );
             const user = userCredential.user;
+            const idToken = await user.getIdToken();
+
             const userDoc = await getDoc(doc(db, "users", user.uid));
-            const userData = userDoc.data();
-            const role = userData?.role || "CUSTOMER";
+            const role = userDoc.data()?.role || "CUSTOMER";
 
-            if (user) {
-                Cookies.set("userRole", role, { expires: 1 });
-                Cookies.set("userName", user.displayName || "", { expires: 1 });
+            Cookies.set("token", idToken, { expires: 1, secure: true });
+            Cookies.set("userRole", role, { expires: 1 });
 
-                localStorage.setItem("userRole", role);
-                localStorage.setItem("userName", user.displayName || "");
-
-                window.location.href = "/dashboard";
-            }
+            window.location.href = "/dashboard";
         } catch (error: unknown) {
             const message =
                 error instanceof Error ? error.message : String(error);
