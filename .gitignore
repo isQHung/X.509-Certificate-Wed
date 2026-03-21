@@ -605,3 +605,6 @@ MigrationBackup/
 !*example*
 
 # End of https://www.toptal.com/developers/gitignore/api/python,vs,nextjs,react,certificates,venv,virtualenv
+# JIRA-16: Ignore actual CSR secrets, allow examples
+*.csr
+!*.csr.example
