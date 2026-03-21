@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Cookies from "js-cookie";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState("");
@@ -27,6 +28,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const menu = role === "ADMIN" ? adminMenu : userMenu;
 
+  const handleLogout = () => {
+    Cookies.remove("userRole");
+    Cookies.remove("userName");
+    
+    localStorage.clear();
+    window.location.href = "/";
+  };
+
   return (
     <div className="flex min-h-screen bg-slate-100 text-slate-900">
       {/* Sidebar */}
@@ -46,7 +55,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
 
         <div className="p-4 border-t border-slate-200">
-          <button onClick={() => window.location.href="/"} className="w-full p-3 text-sm font-bold text-red-600 hover:bg-red-50 rounded-lg transition">
+          <button onClick={handleLogout} className="w-full p-3 text-sm font-bold text-red-600 hover:bg-red-50 rounded-lg transition">
             🚪 Đăng xuất
           </button>
         </div>

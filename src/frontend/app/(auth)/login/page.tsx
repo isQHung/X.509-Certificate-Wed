@@ -1,10 +1,11 @@
 "use client";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import {
     GoogleAuthProvider,
     signInWithEmailAndPassword,
     signInWithPopup,
 } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 import Cookies from "js-cookie";
 import Link from "next/link";
 import { useState } from "react";
@@ -22,10 +23,9 @@ export default function LoginPage() {
                 password,
             );
             const user = userCredential.user;
-
-            // Vì Firebase không lưu Role mặc định, tạm thời ta vẫn set thủ công
-            // Sau này ở JIRA-31 ta sẽ lấy role từ Firestore/Database.
-            const role = username === "admin@gmail.com" ? "ADMIN" : "CUSTOMER";
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            const userData = userDoc.data();
+            const role = userData?.role || "CUSTOMER";
 
             if (user) {
                 Cookies.set("userRole", role, { expires: 1 });
@@ -43,7 +43,7 @@ export default function LoginPage() {
         }
     };
 
-    // Thêm hàm đăng nhập Google
+    // hàm đăng nhập Google
     const handleGoogleLogin = async () => {
         const provider = new GoogleAuthProvider();
         try {
@@ -107,7 +107,6 @@ export default function LoginPage() {
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="••••••••"
                             />
-                            {/* Quên mật khẩu ở góc phải dưới ô input */}
                             <div className="text-right mt-2">
                                 <Link
                                     href="#"
@@ -123,7 +122,6 @@ export default function LoginPage() {
                         </button>
                     </form>
 
-                    {/* Divider */}
                     <div className="relative my-4">
                         <div className="absolute inset-0 flex items-center">
                             <span className="w-full border-t border-slate-100"></span>
