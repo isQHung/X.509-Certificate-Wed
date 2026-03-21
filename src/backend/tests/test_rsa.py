@@ -6,7 +6,7 @@ from cryptography import x509
 
 @pytest.fixture
 def rsa_service():
-    return RSACAService(key_size=2048)
+    return RSACAService()
 
 
 def test_generate_key_pair(rsa_service):
