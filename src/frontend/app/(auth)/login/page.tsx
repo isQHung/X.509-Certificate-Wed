@@ -122,7 +122,7 @@ export default function LoginPage() {
                                 fill="#EA4335"
                             />
                         </svg>
-                        Google
+                        Đăng nhập bằng Google
                     </button>
 
                     {/* Footer Link */}
