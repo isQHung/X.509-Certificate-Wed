@@ -1,5 +1,10 @@
 "use client";
-import { MOCK_USERS } from "@/lib/auth";
+import { auth } from "@/lib/firebase";
+import {
+    GoogleAuthProvider,
+    signInWithEmailAndPassword,
+    signInWithPopup,
+} from "firebase/auth";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -7,18 +12,46 @@ export default function LoginPage() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
 
-    const handleLogin = (e: React.FormEvent) => {
+    // Trong hàm handleLogin
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        const user = MOCK_USERS.find(
-            (u) => u.username === username && u.password === password,
-        );
+        try {
+            const userCredential = await signInWithEmailAndPassword(
+                auth,
+                username,
+                password,
+            );
+            const user = userCredential.user;
 
-        if (user) {
-            localStorage.setItem("userRole", user.role);
-            localStorage.setItem("userName", user.name);
+            // Vì Firebase không lưu Role mặc định, tạm thời ta vẫn set thủ công
+            // Sau này ở JIRA-31 ta sẽ lấy role từ Firestore/Database.
+            const role = username === "admin@gmail.com" ? "ADMIN" : "CUSTOMER";
+
+            localStorage.setItem("userRole", role);
+            localStorage.setItem(
+                "userName",
+                user.displayName || user.email || "",
+            );
             window.location.href = "/dashboard";
-        } else {
-            alert("Sai tài khoản hoặc mật khẩu");
+        } catch (error: unknown) {
+            const message =
+                error instanceof Error ? error.message : String(error);
+            alert("Lỗi đăng nhập: " + message);
+        }
+    };
+
+    // Thêm hàm đăng nhập Google
+    const handleGoogleLogin = async () => {
+        const provider = new GoogleAuthProvider();
+        try {
+            const result = await signInWithPopup(auth, provider);
+            localStorage.setItem("userRole", "CUSTOMER");
+            localStorage.setItem("userName", result.user.displayName || "");
+            window.location.href = "/dashboard";
+        } catch (error: unknown) {
+            const message =
+                error instanceof Error ? error.message : String(error);
+            alert("Lỗi Google: " + message);
         }
     };
 
@@ -102,6 +135,7 @@ export default function LoginPage() {
                     {/* Social Login */}
                     <button
                         type="button"
+                        onClick={handleGoogleLogin}
                         className="w-full flex items-center justify-center gap-3 py-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all"
                     >
                         <svg className="w-5 h-5" viewBox="0 0 24 24">
