@@ -605,3 +605,7 @@ MigrationBackup/
 !*example*
 
 # End of https://www.toptal.com/developers/gitignore/api/python,vs,nextjs,react,certificates,venv,virtualenv
+*.csr
+!*.csr.example
+*.pem
+!*.pem.example
