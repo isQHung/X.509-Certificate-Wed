@@ -1,9 +1,10 @@
 "use client";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
+import Cookies from "js-cookie";
 import Link from "next/link";
 import { useState } from "react";
-import Cookies from "js-cookie";
 
 export default function RegisterPage() {
     const [formData, setFormData] = useState({
@@ -21,6 +22,15 @@ export default function RegisterPage() {
                 formData.email,
                 formData.password,
             );
+            const user = userCredential.user;
+            await setDoc(doc(db, "users", user.uid), {
+                uid: user.uid,
+                email: user.email,
+                displayName: formData.fullName,
+                role: "CUSTOMER",
+                createdAt: new Date().toISOString(),
+            });
+
             await updateProfile(userCredential.user, {
                 displayName: formData.fullName,
             });
