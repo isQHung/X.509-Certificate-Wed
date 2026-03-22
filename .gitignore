@@ -8,10 +8,7 @@
 *.cer
 *.der
 *.priv
-!*.pem.example
-*.csr
-!*.csr.example
-serviceAccountKey.json
+
 ### NextJS ###
 # dependencies
 /node_modules
@@ -608,3 +605,6 @@ MigrationBackup/
 !*example*
 
 # End of https://www.toptal.com/developers/gitignore/api/python,vs,nextjs,react,certificates,venv,virtualenv
+# JIRA-17: Ignore private keys, allow examples
+*.pem
+!*.pem.example
