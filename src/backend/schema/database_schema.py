@@ -41,7 +41,7 @@ class UserBase(BaseModel):
     email: str = Field(..., description="User email address")
     status: UserStatus = Field(default=UserStatus.ACTIVE, description="User account status")
 
-    class Config:
+    class ConfigDict:
         use_enum_values = True
 
 
@@ -59,7 +59,7 @@ class User(UserBase):
     password_hash: str = Field(..., exclude=True)  # Never expose password hash
     created_at: datetime
 
-    class Config:
+    class ConfigDict:
         from_attributes = True
 
 
@@ -67,7 +67,7 @@ class Role(BaseModel):
     id: int
     name: str = Field(..., description="Role name (admin, user, etc.)")
 
-    class Config:
+    class ConfigDict:
         from_attributes = True
 
 
@@ -75,7 +75,7 @@ class UserRole(BaseModel):
     user_id: UUID
     role_id: int
 
-    class Config:
+    class ConfigDict:
         from_attributes = True
 
 
@@ -107,7 +107,7 @@ class CertificateRequest(CertificateRequestBase):
     approved_at: Optional[datetime] = None
     created_at: datetime
 
-    class Config:
+    class ConfigDict:
         from_attributes = True
 
 
@@ -138,7 +138,7 @@ class Certificate(CertificateBase):
     id: UUID
     created_at: datetime
 
-    class Config:
+    class ConfigDict:
         from_attributes = True
 
 
@@ -160,7 +160,7 @@ class Revocation(RevocationBase):
     id: UUID
     revoked_at: datetime
 
-    class Config:
+    class ConfigDict:
         from_attributes = True
 
 
@@ -178,7 +178,7 @@ class CRLCreate(CRLBase):
 class CRL(CRLBase):
     id: UUID
 
-    class Config:
+    class ConfigDict:
         from_attributes = True
 
 
@@ -196,7 +196,7 @@ class CRLEntryCreate(CRLEntryBase):
 class CRLEntry(CRLEntryBase):
     id: UUID
 
-    class Config:
+    class ConfigDict:
         from_attributes = True
 
 
@@ -220,7 +220,7 @@ class AuditLog(AuditLogBase):
     id: int
     created_at: datetime
 
-    class Config:
+    class ConfigDict:
         from_attributes = True
 
 
@@ -243,7 +243,7 @@ class KeyPair(KeyPairBase):
     id: UUID
     created_at: datetime
 
-    class Config:
+    class ConfigDict:
         from_attributes = True
 
 
@@ -300,7 +300,7 @@ class PaginationParams(BaseModel):
     page: int = Field(default=1, ge=1)
     limit: int = Field(default=10, ge=1, le=100)
     sort_by: Optional[str] = None
-    sort_order: Optional[str] = Field(default="desc", regex="^(asc|desc)$")
+    sort_order: Optional[str] = Field(default="desc", pattern="^(asc|desc)$")
 
 
 class CertificateFilters(PaginationParams):
