@@ -8,7 +8,7 @@
 *.cer
 *.der
 *.priv
-
+*.csr
 ### NextJS ###
 # dependencies
 /node_modules
