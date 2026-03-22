@@ -3,6 +3,10 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography import x509
 from cryptography.x509.oid import NameOID
+
+# Lưu ý: Tuỳ thuộc vào cách cậu setup PYTHONPATH hoặc thư mục chạy lệnh test,
+# có thể cậu sẽ cần sửa lại thành 'from src.backend.core.crypto.csr_validator import CSRValidator'
+# Nhưng nếu cậu cd vào thư mục backend trước khi chạy test thì giữ nguyên dòng dưới đây:
 from core.crypto.csr_validator import CSRValidator
 
 @pytest.fixture
@@ -20,7 +24,7 @@ def test_extract_info_correctly(valid_csr_pem):
     validator = CSRValidator(valid_csr_pem)
     info = validator.extract_info()
     
-    # Assert đúng từng field một theo AC
+    # Assert đúng từng field một theo AC mà anh Hùng yêu cầu
     assert info["CN"] == "test.yas.com"
     assert info["Org"] == "YasTeam"
     assert info["Country"] == "VN"
