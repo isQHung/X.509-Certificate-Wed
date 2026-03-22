@@ -1,6 +1,6 @@
 CREATE TABLE certificate_requests (
     id UUID PRIMARY KEY,
-    user_id UUID REFERENCES users(id),
+    user_id UUID,
     
     csr_pem TEXT NOT NULL,
     subject JSONB,
@@ -10,7 +10,7 @@ CREATE TABLE certificate_requests (
         status IN ('pending','approved','rejected','issued')
     ),
 
-    approved_by UUID REFERENCES users(id),
+    approved_by UUID,
     approved_at TIMESTAMP,
 
     created_at TIMESTAMP DEFAULT now()

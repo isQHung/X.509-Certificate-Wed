@@ -1,6 +1,6 @@
 CREATE TABLE key_pairs (
     id UUID PRIMARY KEY,
-    owner_id UUID REFERENCES users(id),
+    owner_id UUID,
 
     key_type TEXT,
     key_size INT,

@@ -2,7 +2,7 @@ CREATE TABLE certificates (
     id UUID PRIMARY KEY,
 
     serial_number TEXT UNIQUE NOT NULL,
-    issuer_id UUID REFERENCES certificates(id), -- self for root
+    issuer_id UUID, -- self-signed for root
 
     subject JSONB,
     san JSONB,
@@ -18,7 +18,7 @@ CREATE TABLE certificates (
 
     certificate_pem TEXT NOT NULL,
 
-    csr_id UUID REFERENCES certificate_requests(id),
+    csr_id UUID,
 
     created_at TIMESTAMP DEFAULT now()
 );

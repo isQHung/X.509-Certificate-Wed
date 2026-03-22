@@ -1,7 +1,7 @@
 CREATE TABLE revocations (
     id UUID PRIMARY KEY,
 
-    certificate_id UUID REFERENCES certificates(id),
+    certificate_id UUID,
     serial_number TEXT NOT NULL,
 
     reason TEXT,
