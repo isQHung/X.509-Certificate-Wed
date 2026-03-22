@@ -4,7 +4,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography import x509
 from cryptography.x509.oid import NameOID
-from AES import CryptoService
+from .AES import CryptoService
 
 class RSACAService:
     def __init__(self):
