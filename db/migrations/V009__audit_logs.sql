@@ -1,3 +1,4 @@
+-- V009__audit_logs.sql
 CREATE TABLE audit_logs (
     id BIGSERIAL PRIMARY KEY,
 
@@ -11,4 +12,3 @@ CREATE TABLE audit_logs (
 
     created_at TIMESTAMP DEFAULT now()
 );
-
