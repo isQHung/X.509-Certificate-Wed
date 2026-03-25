@@ -1,9 +1,9 @@
 from flask import Flask, request, jsonify
 import os
 from datetime import datetime
-
+from api.routers.admin_revoke import revoke_bp
 app = Flask(__name__)
-
+app.register_blueprint(revoke_bp)
 # Health check endpoint
 @app.route("/health", methods=["GET"])
 def health():

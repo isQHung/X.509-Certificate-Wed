@@ -1,30 +1,30 @@
-from fastapi import APIRouter, HTTPException
+from flask import Blueprint, jsonify
 from core.services.revocation_service import RevocationService
 
-router=APIRouter(prefix="/api/v1/admin/revoke", tags=["Admin Revoke"])
+revoke_bp = Blueprint('admin_revoke', __name__, url_prefix='/api/v1/admin/revoke')
 
-@router.post("/list")
+@revoke_bp.route("/list", methods=["POST"])
 def get_revocation_list():
     try:
-        pending_list= RevocationService.get_pending_requests()
-        return{
-            "status":"success",
-            "total_pending": len(pending_list),
-            "data": pending_list
-        }
+        data = RevocationService.get_pending_requests()
+        return jsonify({
+            "status": "success",
+            "total_pending": len(data),
+            "data": data
+        }), 200
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Loi he thong khi lay danh sach")
-    
-@router.post("/{serial}")
-def approve_revocation(serial:str):
-    try:
-        result= RevocationService.approve_request(serial)
+        return jsonify({"error": str(e)}), 500
 
-        return {
-            "status":"success",
-            "message":f"Da thu hoi chung chi {serial}",
+@revoke_bp.route("/<serial>", methods=["POST"])
+def approve_revocation(serial):
+    try:
+        result = RevocationService.approve_request(serial)
+        return jsonify({
+            "status": "success",
+            "message": f"Đã thu hồi thành công chứng chỉ {serial}",
             "data": result
-        }
-    
+        }), 200
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": f"Lỗi server: {str(e)}"}), 500
