@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 import os
 from datetime import datetime
+from router.admin import admin_bp
 
 app = Flask(__name__)
 
@@ -29,6 +30,8 @@ def internal_error(error):
         "error": "Internal server error"
     }), 500
 
+app.register_blueprint(admin_bp)
+    
 
 def main():
     # Development server
