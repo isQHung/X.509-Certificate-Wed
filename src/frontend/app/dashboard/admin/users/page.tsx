@@ -1,14 +1,6 @@
 "use client";
-import { db } from "@/lib/firebase";
+import { createClient } from "@/lib/supabase";
 import { UserAccount } from "@/schema/user.schema";
-import {
-    collection,
-    doc,
-    getDocs,
-    orderBy,
-    query,
-    updateDoc,
-} from "firebase/firestore";
 import { useEffect, useState } from "react";
 
 export default function AdminUsersPage() {
@@ -25,35 +17,51 @@ export default function AdminUsersPage() {
         const fetchUsers = async () => {
             setLoading(true);
             setError(null);
+            const supabase = createClient();
             try {
-                const q = query(
-                    collection(db, "users"),
-                    orderBy("createdAt", "desc"),
-                );
-                const snap = await getDocs(q);
-                const items: UserAccount[] = snap.docs.map((d) => {
-                    const data = d.data() as any;
-                    const created = data.createdAt;
-                    let createdAtStr = "";
-                    if (
-                        created &&
-                        typeof (created as any).toDate === "function"
-                    ) {
-                        createdAtStr = (created as any)
-                            .toDate()
-                            .toISOString()
-                            .slice(0, 10);
-                    } else if (typeof created === "string") {
-                        createdAtStr = created;
-                    }
+                const { data: usersData, error: usersErr } = await supabase
+                    .from("users")
+                    .select("id,email,created_at")
+                    .order("created_at", { ascending: false });
+
+                if (usersErr || !usersData) {
+                    throw usersErr || new Error("Failed to fetch users");
+                }
+
+                const { data: urData } = await supabase
+                    .from("user_roles")
+                    .select("user_id,role_id");
+
+                const { data: rolesData } = await supabase
+                    .from("roles")
+                    .select("id,name");
+
+                const items: UserAccount[] = usersData.map((u: any) => {
+                    const userRoleRow = urData?.find(
+                        (r: any) => r.user_id === u.id,
+                    );
+                    const roleName = userRoleRow
+                        ? rolesData?.find(
+                              (r: any) => r.id === userRoleRow.role_id,
+                          )?.name
+                        : null;
+
+                    const createdAtStr = u.created_at
+                        ? new Date(u.created_at).toISOString().slice(0, 10)
+                        : "";
+
                     return {
-                        uid: d.id,
-                        email: data.email || "",
-                        displayName: data.displayName || data.name || "",
-                        role: data.role === "ADMIN" ? "ADMIN" : "CUSTOMER",
+                        uid: u.id,
+                        email: u.email || "",
+                        displayName: u.email ? u.email.split("@")[0] : "",
+                        role:
+                            roleName?.toUpperCase() === "ADMIN"
+                                ? "ADMIN"
+                                : "CUSTOMER",
                         createdAt: createdAtStr,
                     };
                 });
+
                 setUsers(items);
             } catch (err: unknown) {
                 const msg = err instanceof Error ? err.message : String(err);
@@ -62,16 +70,36 @@ export default function AdminUsersPage() {
                 setLoading(false);
             }
         };
+
         fetchUsers();
     }, []);
 
     // Hàm thay đổi Role
     const toggleRole = async (uid: string, currentRole: string) => {
         const newRole = currentRole === "ADMIN" ? "CUSTOMER" : "ADMIN";
-
-        const userRef = doc(db, "users", uid);
+        const supabase = createClient();
         try {
-            await updateDoc(userRef, { role: newRole });
+            // find role id
+            const { data: rolesData } = await supabase
+                .from("roles")
+                .select("id,name");
+
+            const adminRole = rolesData?.find(
+                (r: any) => r.name?.toUpperCase() === "ADMIN",
+            );
+            const customerRole = rolesData?.find(
+                (r: any) => r.name?.toUpperCase() === "CUSTOMER",
+            );
+            const newRoleId =
+                newRole === "ADMIN" ? adminRole?.id : customerRole?.id;
+
+            if (!newRoleId) throw new Error("Role not found");
+
+            await supabase.from("user_roles").delete().eq("user_id", uid);
+            await supabase
+                .from("user_roles")
+                .insert([{ user_id: uid, role_id: newRoleId }]);
+
             setUsers((prevUsers) =>
                 prevUsers.map((user) =>
                     user.uid === uid ? { ...user, role: newRole } : user,

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from '@supabase/ssr'
 
 export function middleware(request: NextRequest) {
     const token = request.cookies.get("token")?.value;

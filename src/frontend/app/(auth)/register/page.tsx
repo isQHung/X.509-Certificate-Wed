@@ -1,7 +1,5 @@
 "use client";
-import { auth, db } from "@/lib/firebase";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { createClient } from "@/lib/supabase";
 import Cookies from "js-cookie";
 import Link from "next/link";
 import { useState } from "react";
@@ -14,42 +12,82 @@ export default function RegisterPage() {
         password: "",
     });
 
+    const supabase = createClient();
+
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
+        const supabase = createClient();
+
         try {
-            const userCredential = await createUserWithEmailAndPassword(
-                auth,
-                formData.email,
-                formData.password,
-            );
-            const user = userCredential.user;
-            await setDoc(doc(db, "users", user.uid), {
-                uid: user.uid,
-                email: user.email,
-                displayName: formData.fullName,
-                role: "CUSTOMER",
-                createdAt: new Date().toISOString(),
-            });
+            const { data: authData, error: authError } =
+                await supabase.auth.signUp({
+                    email: formData.email,
+                    password: formData.password,
+                    options: {
+                        data: {
+                            full_name: formData.fullName,
+                        },
+                    },
+                });
 
-            await updateProfile(userCredential.user, {
-                displayName: formData.fullName,
-            });
+            if (authError) throw authError;
+            const user = authData?.user;
 
-            if (userCredential.user) {
+            if (user) {
+                const { error: userError } = await supabase
+                    .from("users")
+                    .insert([
+                        {
+                            id: user.id,
+                            email: user.email,
+                            password_hash: "",
+                            status: "active",
+                            created_at: new Date().toISOString(),
+                        },
+                    ]);
+
+                if (userError) {
+                    console.error("Lỗi insert bảng users:", userError);
+                    throw new Error(
+                        "Không thể tạo thông tin người dùng trong cơ sở dữ liệu.",
+                    );
+                }
+
+                const { data: role, error: roleFetchError } = await supabase
+                    .from("roles")
+                    .select("id")
+                    .ilike("name", "customer")
+                    .single();
+
+                if (roleFetchError || !role) {
+                    console.error("Lỗi lấy Role:", roleFetchError);
+                    throw new Error(
+                        "Không tìm thấy vai trò người dùng mặc định.",
+                    );
+                }
+
+                const { error: userRoleError } = await supabase
+                    .from("user_roles")
+                    .insert([{ user_id: user.id, role_id: role.id }]);
+
+                if (userRoleError) {
+                    console.error("Lỗi insert bảng user_roles:", userRoleError);
+                    throw new Error("Không thể cấp quyền cho người dùng.");
+                }
+
                 Cookies.set("userRole", "CUSTOMER", { expires: 1 });
                 Cookies.set("userName", formData.fullName, { expires: 1 });
-
                 localStorage.setItem("userRole", "CUSTOMER");
                 localStorage.setItem("userName", formData.fullName);
+
                 window.location.href = "/dashboard";
             }
         } catch (error: any) {
-            if (error.code === "auth/email-already-in-use") {
-                alert(
-                    "Email already used. Vui lòng sử dụng email khác.",
-                );
+            const errorMsg = error.message || String(error);
+            if (errorMsg.toLowerCase().includes("already used")) {
+                alert("Email đã được sử dụng. Vui lòng chọn email khác.");
             } else {
-                alert("Đăng ký thất bại: " + error.message);
+                alert("Đăng ký thất bại: " + errorMsg);
             }
         }
     };

@@ -1,11 +1,5 @@
 "use client";
-import { auth, db } from "@/lib/firebase";
-import {
-    GoogleAuthProvider,
-    signInWithEmailAndPassword,
-    signInWithPopup,
-} from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { createClient } from "@/lib/supabase";
 import Cookies from "js-cookie";
 import Link from "next/link";
 import { useState } from "react";
@@ -13,22 +7,51 @@ import { useState } from "react";
 export default function LoginPage() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
+    const supabase = createClient();
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const userCredential = await signInWithEmailAndPassword(
-                auth,
-                username,
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: username,
                 password,
-            );
-            const user = userCredential.user;
-            const idToken = await user.getIdToken();
+            });
 
-            const userDoc = await getDoc(doc(db, "users", user.uid));
-            const role = userDoc.data()?.role || "CUSTOMER";
+            if (error || !data?.user) {
+                throw error || new Error("Đăng nhập thất bại");
+            }
 
-            Cookies.set("token", idToken, { expires: 1, secure: true });
+            const accessToken = (data.session as any)?.access_token;
+
+            let role = "CUSTOMER";
+            try {
+                const { data: userRoleData, error: roleError } = await supabase
+                    .from("user_roles")
+                    .select(
+                        `roles (name)`,
+                    )
+                    .eq("user_id", data.user.id) 
+                    .single();
+
+                if (roleError) {
+                    console.error(
+                        "Lỗi lấy quyền người dùng:",
+                        roleError.message,
+                    );
+                } else if (userRoleData?.roles) {
+                    const rawRole = (userRoleData.roles as any).name;
+                    role =
+                        rawRole?.toUpperCase() === "ADMIN"
+                            ? "ADMIN"
+                            : "CUSTOMER";
+                }
+            } catch (err) {
+                console.error("Crashed khi xử lý role:", err);
+            }
+
+            if (accessToken) {
+                Cookies.set("token", accessToken, { expires: 1, secure: true });
+            }
             Cookies.set("userRole", role, { expires: 1 });
             localStorage.setItem("userRole", role || "");
 
@@ -40,14 +63,10 @@ export default function LoginPage() {
         }
     };
 
-    // hàm đăng nhập Google
+    // Hàm đăng nhập Google
     const handleGoogleLogin = async () => {
-        const provider = new GoogleAuthProvider();
         try {
-            const result = await signInWithPopup(auth, provider);
-            localStorage.setItem("userRole", "CUSTOMER");
-            localStorage.setItem("userName", result.user.displayName || "");
-            window.location.href = "/dashboard";
+            await supabase.auth.signInWithOAuth({ provider: "google" });
         } catch (error: unknown) {
             const message =
                 error instanceof Error ? error.message : String(error);
