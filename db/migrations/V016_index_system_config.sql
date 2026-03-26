@@ -1,0 +1,1 @@
+CREATE INDEX idx_system_configs_name ON system_configs(name);

@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Optional, List, Any, Dict
 from uuid import UUID
 from enum import Enum
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from pydantic.types import Json
 
 
@@ -266,6 +266,26 @@ class CertificateRequestWithDetails(CertificateRequest):
     approver: Optional[User] = None
     certificate: Optional[Certificate] = None
 
+# ============================================
+# SYSTEM CONFIGURATION MODELS
+# ============================================
+
+class SystemConfigBase(BaseModel):
+    name: Optional[str] = Field(default=None, description="Name of the system configuration")
+    key_algorithm: Optional[str] = Field(default=None, description="Key algorithm (RSA, ECDSA, etc.)")
+    key_size: Optional[int] = Field(default=None, description="Key size in bits")
+    signature_algorithm: Optional[str] = Field(default=None, description="Signature algorithm (SHA256, SHA384, SHA512, etc.)")
+    hash_algorithm: Optional[str] = Field(default=None, description="Hash algorithm (SHA256, SHA384, SHA512, etc.)")
+    default_validity_days: Optional[int] = Field(default=None, description="Default validity days")
+
+class SystemConfigCreate(SystemConfigBase):
+    pass
+
+class SystemConfigResponse(SystemConfigBase):
+    id: Optional[UUID] = Field(default=None, description="ID of the system configuration")
+
+    class ConfigDict:
+        from_attributes = True
 
 # ============================================
 # API REQUEST/RESPONSE MODELS
@@ -324,7 +344,7 @@ class PaginatedResponse(BaseModel):
     limit: int
     total_pages: int
 
-    @validator('total_pages', always=True)
+    @field_validator('total_pages')
     def calculate_total_pages(cls, v, values):
         if 'total' in values and 'limit' in values:
             return (values['total'] + values['limit'] - 1) // values['limit']
