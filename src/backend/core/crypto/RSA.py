@@ -93,29 +93,29 @@ class RSACAService:
     def serialize_cert(self, cert: x509.Certificate) -> bytes:
         return cert.public_bytes(serialization.Encoding.PEM)
     
-    def sign_csr(self, csr_pem: bytes, ca_private_key, ca_cert: x509.Certificate, validity_days: int = 365) -> x509.Certificate:
-        """Ký CSR bằng Root CA để tạo Leaf Certificate."""
-        csr = x509.load_pem_x509_csr(csr_pem)
+    # def sign_csr(self, csr_pem: bytes, ca_private_key, ca_cert: x509.Certificate, validity_days: int = 365) -> x509.Certificate:
+    #     """Ký CSR bằng Root CA để tạo Leaf Certificate."""
+    #     csr = x509.load_pem_x509_csr(csr_pem)
         
-        if not csr.is_signature_valid:
-            raise ValueError("Chữ ký của CSR không hợp lệ!")
+    #     if not csr.is_signature_valid:
+    #         raise ValueError("Chữ ký của CSR không hợp lệ!")
 
-        builder = x509.CertificateBuilder().subject_name(
-            csr.subject
-        ).issuer_name(
-            ca_cert.subject
-        ).public_key(
-            csr.public_key()
-        ).serial_number(
-            x509.random_serial_number()
-        ).not_valid_before(
-            datetime.datetime.now(datetime.UTC)
-        ).not_valid_after(
-            datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=validity_days)
-        )
+    #     builder = x509.CertificateBuilder().subject_name(
+    #         csr.subject
+    #     ).issuer_name(
+    #         ca_cert.subject
+    #     ).public_key(
+    #         csr.public_key()
+    #     ).serial_number(
+    #         x509.random_serial_number()
+    #     ).not_valid_before(
+    #         datetime.datetime.now(datetime.UTC)
+    #     ).not_valid_after(
+    #         datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=validity_days)
+    #     )
 
-        cert = builder.sign(ca_private_key, hashes.SHA256())
-        return cert
+    #     cert = builder.sign(ca_private_key, hashes.SHA256())
+    #     return cert
     
     def load_private_key(self, pem_bytes: bytes, password: bytes = None):
         """Load Private Key từ chuỗi PEM (truyền password nếu lúc tạo có cài pass)."""

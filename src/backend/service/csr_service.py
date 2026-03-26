@@ -1,86 +1,82 @@
-from core.crypto.RSA import RSACAService
-from database.supabase import *
+import os
 from datetime import datetime, timezone
 from cryptography import x509
 from cryptography.hazmat.primitives import serialization
-from core.validator.csr_valid import check_csr_valid
-import os
+import json
+from database.supabase import supabase
+from schema.database_schema import CertificateCreate
+from core.crypto.cert_signer import CertSigner
+from core.validator.csr_validator import CSRValidator
 
-rsa_service = RSACAService()
+def get_csr_by_id(req_id: str) -> dict | None:
+    res = supabase.table("certificate_requests").select("*").eq("id", req_id).execute()
+    return res.data[0] if res.data else None
 
-def approve_csr(req_id):
+def list_pending_csr() -> list:
+    res = supabase.table("certificate_requests").select("*").eq("status", "pending").execute()
+    return res.data or []
+
+def approve_csr(req_id: str) -> dict:
     csr_req = get_csr_by_id(req_id)
-
     if not csr_req:
-        raise Exception("CSR not found")
-
-    if csr_req["status"] != "pending":
-        raise Exception("Already processed")
-
-    # load pri key của CA và cert của CA
-    ca_priv_key, ca_cert = rsa_service.load_root_ca_credentials(
-        key_path=os.getenv("KEY_PATH_CA"),
-        cert_path=os.getenv("CERT_PATH_CA")
-    )
-
-    # ký
-    cert = rsa_service.sign_csr(
-        csr_pem=csr_req["csr_pem"].encode(),
-        ca_private_key=ca_priv_key,
-        ca_cert=ca_cert
-    )
-
-    cert_pem = rsa_service.serialize_cert(cert).decode()
-    serial = str(cert.serial_number)
+        raise ValueError("CSR not found")
     
-    subject = csr_req["subject"]
-    san = csr_req["san"]
+    if csr_req.get("status") != "pending":
+        raise ValueError("CSR is not in pending status")
+
+    csr_pem_bytes = csr_req.get("csr_pem").encode('utf-8')
+
+    validator = CSRValidator(csr_pem_bytes)
+    validator.validate_signature()
+
+    with open(os.getenv("CERT_PATH_CA"), "rb") as f:
+        root_cert_pem = f.read()
+    with open(os.getenv("KEY_PATH_CA"), "rb") as f:
+        root_key_pem = f.read()
+
+    signer = CertSigner(root_cert_pem=root_cert_pem, root_key_pem=root_key_pem)
+    cert_pem_bytes = signer.sign_csr(csr_pem=csr_pem_bytes)
+
+    parsed_cert = x509.load_pem_x509_certificate(cert_pem_bytes)
     
-    public_key = cert.public_key().public_bytes(
+    public_key_pem = parsed_cert.public_key().public_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PublicFormat.SubjectPublicKeyInfo
-    ).decode()
+    ).decode('utf-8')
 
-    save_certificate({
+    subject_raw = csr_req.get("subject")
+    san_raw = csr_req.get("san")
 
-        "serial_number": str(cert.serial_number),
-        "issuer_id": os.getenv("ISSUER_CA"),
-        "subject": subject,
-        "san": san,
+    cert_payload = CertificateCreate(
+        serial_number=str(parsed_cert.serial_number),
+        issuer_id=None, # Tạm để None để bypass khóa ngoại lúc test
+        subject=json.dumps(subject_raw) if subject_raw else None,
+        san=json.dumps(san_raw) if san_raw else None,
+        public_key=public_key_pem,
+        valid_from=parsed_cert.not_valid_before_utc.isoformat(),
+        valid_to=parsed_cert.not_valid_after_utc.isoformat(),
+        status="active",
+        certificate_pem=cert_pem_bytes.decode('utf-8'),
+        csr_id=req_id
+    ).model_dump(mode='json')
 
-        "public_key": public_key,
-
-        "valid_from": cert.not_valid_before.isoformat(),
-        "valid_to": cert.not_valid_after.isoformat(),
-
-        "status": "active",
-        "certificate_pem": cert_pem,
-        "csr_id": csr_req["id"],
-        "created_at": datetime.now(timezone.utc).isoformat()
-    })
+    supabase.table("certificates").insert(cert_payload).execute()
     
-    # update DB
-    csr_req["status"] = "issued"
-    update_csr_status(csr_req)
-    update_csr_time(csr_req)
+    supabase.table("certificate_requests").update({
+        "status": "issued", 
+        "approved_at": datetime.now(timezone.utc).isoformat()
+    }).eq("id", req_id).execute()
+    
+    return {"message": "Certificate issued", "serial": cert_payload["serial_number"]}
 
-    return {"message": "Approved", "serial": serial}
-
-def reject_csr(req_id):
+def reject_csr(req_id: str) -> dict:
     csr_req = get_csr_by_id(req_id)
-
     if not csr_req:
-        raise Exception("CSR not found")
+        raise ValueError("CSR not found")
+        
+    if csr_req.get("status") != "pending":
+        raise ValueError("CSR is not in pending status")
 
-    if csr_req["status"] != "pending":
-        raise Exception("Already processed")
+    supabase.table("certificate_requests").update({"status": "rejected"}).eq("id", req_id).execute()
     
-    # update DB
-    csr_req["status"] = "rejected"
-    update_csr_status(csr_req)
-
-    return {"message": "Rejected"}
-
-def list_pending_csr():
-    res= get_csr(status="pending")
-    return res
+    return {"message": "CSR rejected"}
