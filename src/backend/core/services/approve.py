@@ -1,12 +1,13 @@
+from core.crypto.csr_validator import CSRValidator
 from core.crypto.RSA import RSACAService
-from database.supabase import *
+from core.repository.approve import *
 from datetime import datetime, timezone
-from cryptography import x509
 from cryptography.hazmat.primitives import serialization
-from core.validator.csr_valid import check_csr_valid
 import os
+from core.crypto.cert_signer import CertSigner
 
 rsa_service = RSACAService()
+
 
 def approve_csr(req_id):
     csr_req = get_csr_by_id(req_id)
@@ -16,6 +17,16 @@ def approve_csr(req_id):
 
     if csr_req["status"] != "pending":
         raise Exception("Already processed")
+    
+    #validate CSR
+    csr_pem = csr_req["csr_pem"]
+    if isinstance(csr_pem, str):
+        csr_pem = csr_pem.encode()
+
+    validator = CSRValidator(csr_pem)
+
+    # check chữ ký
+    validator.validate_signature()
 
     # load pri key của CA và cert của CA
     ca_priv_key, ca_cert = rsa_service.load_root_ca_credentials(
@@ -23,8 +34,10 @@ def approve_csr(req_id):
         cert_path=os.getenv("CERT_PATH_CA")
     )
 
+    signer = CertSigner(ca_cert,ca_priv_key)
+    
     # ký
-    cert = rsa_service.sign_csr(
+    cert = signer.sign_csr(
         csr_pem=csr_req["csr_pem"].encode(),
         ca_private_key=ca_priv_key,
         ca_cert=ca_cert
@@ -64,7 +77,7 @@ def approve_csr(req_id):
     update_csr_status(csr_req)
     update_csr_time(csr_req)
 
-    return {"message": "Approved", "serial": serial}
+    return serial
 
 def reject_csr(req_id):
     csr_req = get_csr_by_id(req_id)

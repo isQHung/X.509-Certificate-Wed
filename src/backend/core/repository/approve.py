@@ -1,11 +1,8 @@
-from supabase import create_client, Client
-import os
 from datetime import datetime, timezone
+from db.supabase_client import get_supabase_client
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
 
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+supabase = get_supabase_client()
 
 def get_csr_by_id(req_id):
     res = supabase.table("certificate_requests").select("*").eq("id", req_id).execute()

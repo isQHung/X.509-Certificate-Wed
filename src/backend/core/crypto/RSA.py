@@ -4,7 +4,6 @@ from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography import x509
 from cryptography.x509.oid import NameOID
-from core.crypto.AES import CryptoService
 
 class RSACAService:
     def __init__(self):
@@ -92,57 +91,13 @@ class RSACAService:
 
     def serialize_cert(self, cert: x509.Certificate) -> bytes:
         return cert.public_bytes(serialization.Encoding.PEM)
-    
-    def sign_csr(self, csr_pem: bytes, ca_private_key, ca_cert: x509.Certificate, validity_days: int = 365) -> x509.Certificate:
-        """Ký CSR bằng Root CA để tạo Leaf Certificate."""
-        csr = x509.load_pem_x509_csr(csr_pem)
-        
-        if not csr.is_signature_valid:
-            raise ValueError("Chữ ký của CSR không hợp lệ!")
-
-        builder = x509.CertificateBuilder().subject_name(
-            csr.subject
-        ).issuer_name(
-            ca_cert.subject
-        ).public_key(
-            csr.public_key()
-        ).serial_number(
-            x509.random_serial_number()
-        ).not_valid_before(
-            datetime.datetime.now(datetime.UTC)
-        ).not_valid_after(
-            datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=validity_days)
-        )
-
-        cert = builder.sign(ca_private_key, hashes.SHA256())
-        return cert
-    
-    def load_private_key(self, pem_bytes: bytes, password: bytes = None):
-        """Load Private Key từ chuỗi PEM (truyền password nếu lúc tạo có cài pass)."""
-        return serialization.load_pem_private_key(
-            pem_bytes,
-            password=password,
-        )
-
-    def load_certificate(self, pem_bytes: bytes) -> x509.Certificate:
-        """Load Certificate từ chuỗi PEM."""
-        return x509.load_pem_x509_certificate(pem_bytes)
-    
+      
     def load_root_ca_credentials(self, key_path: str, cert_path: str):
-    # đọc file key
         with open(key_path, "rb") as f:
             key_bytes = f.read()
 
-        private_key = self.load_private_key(
-            key_bytes,
-            # password=self.key_passphrase.encode() if self.key_passphrase else None
-            password=None
-        )
-
-    # đọc file cert
         with open(cert_path, "rb") as f:
             cert_bytes = f.read()
 
-        cert = self.load_certificate(cert_bytes)
-
-        return private_key, cert
+        # Trả về bytes nguyên thủy
+        return key_bytes, cert_bytes

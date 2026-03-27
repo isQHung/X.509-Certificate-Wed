@@ -1,16 +1,17 @@
 from flask import Flask, request, jsonify
 import os
 from datetime import datetime
-from router.admin import admin_bp
+from api.routes import routes
 
 app = Flask(__name__)
+app.register_blueprint(routes)
+
 
 # Health check endpoint
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({
         "status": "healthy",
-        "message": os.getenv("ENV_VAR"),
         "timestamp": datetime.now().isoformat()
     }), 200
 
@@ -30,8 +31,6 @@ def internal_error(error):
         "error": "Internal server error"
     }), 500
 
-app.register_blueprint(admin_bp)
-    
 
 def main():
     # Development server
