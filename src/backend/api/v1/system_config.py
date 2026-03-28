@@ -83,3 +83,4 @@ def delete_config(config_id):
         return jsonify({"error": "Config not found"}), 404
 
     return jsonify({"message": "Deleted successfully"})
+

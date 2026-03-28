@@ -4,7 +4,6 @@ from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography import x509
 from cryptography.x509.oid import NameOID
-from .AES import CryptoService
 
 class RSACAService:
     def __init__(self):
@@ -92,3 +91,13 @@ class RSACAService:
 
     def serialize_cert(self, cert: x509.Certificate) -> bytes:
         return cert.public_bytes(serialization.Encoding.PEM)
+      
+    def load_root_ca_credentials(self, key_path: str, cert_path: str):
+        with open(key_path, "rb") as f:
+            key_bytes = f.read()
+
+        with open(cert_path, "rb") as f:
+            cert_bytes = f.read()
+
+        # Trả về bytes nguyên thủy
+        return key_bytes, cert_bytes
