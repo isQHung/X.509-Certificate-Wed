@@ -4,7 +4,8 @@ from unittest.mock import patch
 from datetime import datetime, timezone
 import uuid
 from api.v1.approve import admin_bp 
-
+from schema.database_schema import CertificateRequest
+import json
 
 # --- FIXTURE ---
 @pytest.fixture
@@ -24,24 +25,28 @@ def client(app):
 # =========================
 @patch("api.v1.approve.list_pending_csr")
 def test_list_pending_csr(mock_list_pending_csr, client):
-    # Cập nhật dữ liệu giả với ĐẦY ĐỦ các trường bắt buộc của schema
+    # SỬA: Biến Dict thành chuỗi JSON string cho trường subject và san
     mock_list_pending_csr.return_value = [
-        {
+        CertificateRequest(**{
             "id": uuid.uuid4(),
             "user_id": str(uuid.uuid4()),
             "status": "pending",
-            "subject": {"CN": "example1.com"},  
-            "san": {"DNS": ["example1.com", "www.example1.com"]}, 
+            "csr_pem": "fake_csr_data", 
+            # Dùng chuỗi string trực tiếp:
+            "subject": '{"CN": "example1.com"}',  
+            "san": '{"DNS": ["example1.com", "www.example1.com"]}', 
             "created_at": datetime.now(timezone.utc).isoformat() 
-        },
-        {
+        }),
+        CertificateRequest(**{
             "id": uuid.uuid4(),
             "user_id": str(uuid.uuid4()),
             "status": "pending",
-            "subject": {"CN": "example2.com"},
-            "san": {"DNS": ["example2.com"]},
+            "csr_pem": "fake_csr_data",
+            # Hoặc dùng json.dumps() cho an toàn:
+            "subject": json.dumps({"CN": "example2.com"}),
+            "san": json.dumps({"DNS": ["example2.com"]}),
             "created_at": datetime.now(timezone.utc).isoformat()
-        }
+        })
     ]
 
     response = client.get("/api/v1/approve/list")
@@ -50,9 +55,9 @@ def test_list_pending_csr(mock_list_pending_csr, client):
     print(response.json)
 
     assert response.status_code == 200
-    assert "pending_requests" in response.json
-    assert len(response.json["pending_requests"]) == 2
-    for item in response.json["pending_requests"]:
+    assert isinstance(response.json, list)
+    assert len(response.json) == 2
+    for item in response.json:
         assert "id" in item
         assert "status" in item
         assert item["status"] == "pending"
@@ -67,7 +72,7 @@ def test_reject_csr_success(mock_reject_csr, client):
 
     mock_reject_csr.return_value = "Rejected"
 
-    response = client.post(f"/api/v1/reject/{test_id}")
+    response = client.post(f"/api/v1/approve/{test_id}/reject")
 
     assert response.status_code == 200
     assert response.json["message"] == "Rejected"
@@ -84,7 +89,7 @@ def test_reject_csr_fail(mock_reject_csr, client):
 
     mock_reject_csr.side_effect = Exception("Already processed")
 
-    response = client.post(f"/api/v1/reject/{test_id}")
+    response = client.post(f"/api/v1/approve/{test_id}/reject")
 
     assert response.status_code == 400
     assert "Already processed" in response.json["error"]
@@ -101,7 +106,7 @@ def test_approve_csr_success(mock_approve_csr, client):
 
     mock_approve_csr.return_value = "999888777"
 
-    response = client.post(f"/api/v1/approve/{test_id}")
+    response = client.post(f"/api/v1/approve/{test_id}/approve")
 
     assert response.status_code == 200
     assert response.json["message"] == "CSR approved successfully"
@@ -119,7 +124,7 @@ def test_approve_csr_fail(mock_approve_csr, client):
 
     mock_approve_csr.side_effect = Exception("CSR not found")
 
-    response = client.post(f"/api/v1/approve/{test_id}")
+    response = client.post(f"/api/v1/approve/{test_id}/approve")
 
     assert response.status_code == 400
     assert "CSR not found" in response.json["error"]

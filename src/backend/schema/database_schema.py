@@ -141,27 +141,6 @@ class Certificate(CertificateBase):
     class ConfigDict:
         from_attributes = True
 
-# ============================================
-# APPROVE & REJECT CSR MODELS
-# ============================================
-class ApproveCSRResponse(BaseModel):
-    message: str
-    serial: str
-    
-class RejectCSRResponse(BaseModel):
-    message: str
-    
-class CSRItemResponse(BaseModel):
-    id: UUID
-    user_id: UUID
-    subject: Optional[dict]
-    san: Optional[dict]
-    status: CertificateRequestStatus
-    created_at: datetime
-    
-class ListPendingCSRResponse(BaseModel):
-    pending_requests: List[CSRItemResponse]
-
 
 # ============================================
 # REVOCATION & CRL MODELS
