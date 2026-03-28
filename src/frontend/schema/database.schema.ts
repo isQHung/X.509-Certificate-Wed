@@ -2,6 +2,8 @@
 // COMMON TYPES & ENUMS
 // ============================================
 
+import { isUUID } from ".";
+
 export type UUID = string;
 export type Timestamp = string; // ISO 8601 date string
 export type JSONValue = any;
@@ -87,6 +89,17 @@ export interface Certificate {
 export interface Revocation {
   id: UUID;
   certificate_id: UUID;
+  requested_by: UUID;
+  reason?: string;
+  status: string;
+  approved_by: UUID;
+  approved_at: Timestamp;
+  created_at: Timestamp;
+}
+
+export interface Revocation {
+  id: UUID;
+  certificate_id: UUID;
   serial_number: string;
   reason?: string;
   revoked_at: Timestamp;
@@ -133,6 +146,19 @@ export interface KeyPair {
   key_size: number;
   fingerprint: string;
   created_at: Timestamp;
+}
+
+// ============================================
+// SYSTEM CONFIGURATION MODELS
+// ============================================
+
+export interface SystemConfigBase{
+    name: string;
+    key_algorithm: string;
+    key_size: string;
+    signature_algorithm: string;
+    hash_algorithm: string;
+    default_validity_days: number;
 }
 
 // ============================================

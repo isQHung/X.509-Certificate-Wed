@@ -518,3 +518,288 @@ VD:
 * CRL = snapshot signed
 
 ---
+# 📦 Fields của `revocation_requests`
+```
+| Field          | Vai trò             |
+| -------------- | ------------------- |
+| id             | định danh request   |
+| certificate_id | cert bị revoke      |
+| requested_by   | ai yêu cầu          |
+| reason         | lý do               |
+| status         | trạng thái workflow |
+| approved_by    | ai duyệt            |
+| approved_at    | khi nào duyệt       |
+| created_at     | khi tạo request     |
+
+```
+## 🔹 `id`
+
+* **Kiểu:** UUID (PK)
+* **Ý nghĩa:**
+
+  * định danh duy nhất cho mỗi yêu cầu thu hồi
+* **Dùng để:**
+
+  * tracking request
+  * liên kết audit / API
+
+---
+
+## 🔹 `certificate_id`
+
+* **Kiểu:** UUID (FK → certificates.id)
+* **Ý nghĩa:**
+
+  * certificate nào đang bị yêu cầu thu hồi
+* **Dùng để:**
+
+  * xác định target của revoke
+
+---
+
+## 🔹 `requested_by`
+
+* **Kiểu:** UUID (FK → users.id)
+* **Ý nghĩa:**
+
+  * ai gửi yêu cầu thu hồi
+* **Dùng để:**
+
+  * audit
+  * kiểm tra quyền (user có được revoke không)
+
+---
+
+## 🔹 `reason`
+
+* **Kiểu:** TEXT
+* **Ý nghĩa:**
+
+  * lý do thu hồi
+
+### Ví dụ:
+
+```text
+key_compromise
+cessation_of_operation
+superseded
+```
+
+👉 quan trọng cho:
+
+* audit
+* CRL (reason code)
+
+---
+
+## 🔹 `status`
+
+* **Kiểu:** TEXT / ENUM
+
+### Giá trị:
+
+```text
+pending   → chờ duyệt
+approved  → đã duyệt
+rejected  → bị từ chối
+```
+
+👉 đây là field điều khiển workflow
+
+---
+
+## 🔹 `approved_by`
+
+* **Kiểu:** UUID (FK → users.id)
+* **Ý nghĩa:**
+
+  * admin nào đã duyệt request
+* **Dùng để:**
+
+  * audit
+  * accountability
+
+---
+
+## 🔹 `approved_at`
+
+* **Kiểu:** TIMESTAMP
+* **Ý nghĩa:**
+
+  * thời điểm request được duyệt
+* **Dùng để:**
+
+  * tracking timeline
+  * điều tra sự cố
+
+---
+
+## 🔹 `created_at`
+
+* **Kiểu:** TIMESTAMP
+* **Ý nghĩa:**
+
+  * thời điểm request được tạo
+* **Dùng để:**
+
+  * audit
+  * đo thời gian xử lý
+
+---
+
+---
+
+# 📦 Fields của `system_configs`
+
+| Field                 | Vai trò             |
+| --------------------- | ------------------- |
+| id                    | định danh config    |
+| name                  | tên cấu hình        |
+| key_algorithm         | loại thuật toán key |
+| key_size              | độ dài key          |
+| signature_algorithm   | thuật toán ký       |
+| hash_algorithm        | hàm băm             |
+| default_validity_days | thời hạn cert       |
+
+## 🔹 `id`
+
+* **Kiểu:** UUID (PK)
+* **Ý nghĩa:**
+
+  * định danh duy nhất cho mỗi cấu hình hệ thống
+* **Dùng để:**
+
+  * tham chiếu từ các bảng khác (ví dụ CSR, certificate)
+  * quản lý nhiều cấu hình song song
+
+---
+
+## 🔹 `name`
+
+* **Kiểu:** TEXT (UNIQUE)
+* **Ý nghĩa:**
+
+  * tên của cấu hình (config profile)
+* **Dùng để:**
+
+  * phân biệt các cấu hình khác nhau
+  * hiển thị trong UI / API
+
+### Ví dụ:
+
+```text
+default-rsa-2048
+high-security-4096
+ecdsa-internal
+```
+
+---
+
+## 🔹 `key_algorithm`
+
+* **Kiểu:** TEXT
+* **Ý nghĩa:**
+
+  * thuật toán bất đối xứng dùng để tạo key pair
+
+### Giá trị phổ biến:
+
+```text
+RSA
+ECDSA
+```
+
+👉 dùng để:
+
+* validate CSR
+* enforce loại key được phép sử dụng
+
+---
+
+## 🔹 `key_size`
+
+* **Kiểu:** INT (nullable)
+* **Ý nghĩa:**
+
+  * độ dài khóa (áp dụng cho RSA)
+
+### Ví dụ:
+
+```text
+2048
+4096
+```
+
+👉 dùng để:
+
+* đảm bảo mức độ bảo mật tối thiểu
+
+⚠️ nullable vì:
+
+* nếu dùng ECDSA → dùng `curve` thay thế (không cần key_size)
+
+---
+
+## 🔹 `signature_algorithm`
+
+* **Kiểu:** TEXT
+* **Ý nghĩa:**
+
+  * thuật toán CA dùng để ký certificate
+
+### Ví dụ:
+
+```text
+SHA256WithRSA
+ECDSAWithSHA256
+```
+
+👉 quyết định:
+
+* cách tạo chữ ký số trong certificate
+
+---
+
+## 🔹 `hash_algorithm`
+
+* **Kiểu:** TEXT
+* **Ý nghĩa:**
+
+  * hàm băm mật mã sử dụng trong quá trình ký
+
+### Ví dụ:
+
+```text
+SHA-256
+SHA-384
+```
+
+👉 dùng để:
+
+* hash dữ liệu trước khi ký
+* tạo fingerprint
+
+---
+
+## 🔹 `default_validity_days`
+
+* **Kiểu:** INT
+* **Ý nghĩa:**
+
+  * thời hạn mặc định của certificate (tính theo ngày)
+
+### Ví dụ:
+
+```text
+90
+365
+```
+
+👉 dùng để:
+
+* tính:
+
+```text
+valid_from → valid_to
+```
+---
