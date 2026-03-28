@@ -2,8 +2,10 @@ from datetime import datetime, timezone, timedelta
 from db.supabase_client import get_supabase_client
 from typing import List, Optional
 from schema.database_schema import Revocation
+from schema.database_schema import Revocation, CRLCreate, CRLEntryCreate
 supabase = get_supabase_client()
 class RevocationService:
+    
     
     @staticmethod
     def get_pending_list() -> List[Revocation]:
@@ -18,6 +20,9 @@ class RevocationService:
     @staticmethod
     def approve_revocation(serial_number: str) -> dict:
         """Phê duyệt thu hồi và tạo ngay CRL theo yêu cầu của Lead"""
+        now = datetime.now(timezone.utc)
+        now_iso = now.isoformat()
+        next_update = (now + timedelta(days=7)).isoformat()
         now_utc = datetime.now(timezone.utc).isoformat()
         next_update_utc = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat() # CRL có hạn 7 ngày
 
@@ -42,16 +47,15 @@ class RevocationService:
             "status": "revoked"
         }).eq("serial_number", serial_number).execute()
 
-        crl_insert_data = {
-            "version": 2,
-            "generated_at": now_utc,
-            "next_update": next_update_utc,
-            "crl_pem": f"-----BEGIN X509 CRL-----\nDUMMY_CRL_FOR_{serial_number}\n-----END X509 CRL-----" 
-        }
+        crl_payload = CRLCreate(
+            version=2,
+            generated_at=now,
+            next_update=now + timedelta(days=7),
+            crl_pem="-----BEGIN X509 CRL-----\nMIIB...SIGNED_CONTENT...-----END X509 CRL-----" 
+        )
         
-        crl_res = supabase.table("crl").insert(crl_insert_data).execute()
-        new_crl_id = crl_res.data[0]["id"] 
-
+        crl_res = supabase.table("crl").insert(crl_payload.model_dump(exclude_none=True)).execute()
+        new_crl_id = crl_res.data[0]["id"]
         crl_entry_data = {
             "crl_id": new_crl_id,
             "serial_number": serial_number,
@@ -63,8 +67,11 @@ class RevocationService:
         
 
         return {
+            "success": True,
             "serial_number": serial_number,
-            "status": "revoked"
+            "status": "revoked",
+            "revoked_at": now_iso,
+            "message": "Certificate has been successfully revoked and added to CRL."
         }
     
     @staticmethod
@@ -91,6 +98,9 @@ class RevocationService:
              raise ValueError(f"Không có yêu cầu thu hồi nào đang chờ duyệt cho Serial: {serial_number}")
 
         return {
+            "success": True,
             "serial_number": serial_number,
-            "status": "rejected"
+            "status": "rejected",
+            "message": "Revocation request has been rejected and removed from the queue.",
+            "processed_at": datetime.now(timezone.utc).isoformat()
         }
