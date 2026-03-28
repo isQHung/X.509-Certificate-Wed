@@ -9,12 +9,24 @@ class RevocationService:
     
     @staticmethod
     def get_pending_list() -> List[Revocation]:
-        response = supabase.table("revocation_requests") \
-            .select("id, certificate_id, reason, status, created_at, certificates!inner(serial_number, subject, status, valid_to)") \
-            .eq("status", "pending") \
+        res = (
+            supabase.table("revocation_requests")
+            .select("id, certificate_id, reason, status, created_at, certificates!inner(serial_number)")
+            .eq("status", "pending")
             .execute()
-        
-        return [Revocation(**item) for item in response.data]
+        )
+
+        return [
+            Revocation(
+                id=item["id"],
+                certificate_id=item["certificate_id"],
+                serial_number=item["certificates"]["serial_number"],
+                reason=item["reason"],
+                status=item["status"],
+                revoked_at=item["created_at"]
+            ) 
+            for item in res.data
+        ]
 
     @staticmethod
     def approve_revocation(serial_number: str) -> bool:
@@ -50,22 +62,7 @@ class RevocationService:
             "revoked_at": now_iso
         }).execute()
 
-        crl_latest = supabase.table("crl") \
-            .select("id") \
-            .order("generated_at", desc=True) \
-            .limit(1) \
-            .execute()
         
-        if not crl_latest.data:
-            raise ValueError("Không tìm thấy bản ghi CRL nào trong hệ thống để gán entry.")
-        target_crl_id = crl_latest.data[0]["id"]
-        entry_payload = CRLEntryCreate(
-            crl_id=target_crl_id,
-            serial_number=serial_number,
-            revoked_at=now,
-            reason=actual_reason
-        )
-        supabase.table("crl_entries").insert(entry_payload.model_dump()).execute()
 
         return True
     
