@@ -84,6 +84,7 @@ class UserRole(BaseModel):
 # ============================================
 
 class CertificateRequestBase(BaseModel):
+    user_id: UUID = Field(..., description="ID of the user sending the CSR")
     csr_pem: str = Field(..., description="Certificate Signing Request in PEM format")
     subject: Optional[Json] = Field(default=None, description="Certificate subject as JSON")
     san: Optional[Json] = Field(default=None, description="Subject Alternative Names as JSON")
