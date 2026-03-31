@@ -147,6 +147,33 @@ class Certificate(CertificateBase):
 # REVOCATION & CRL MODELS
 # ============================================
 
+class RevocationRequestBase(BaseModel):
+    cert_id: UUID = Field(..., description="Certificate Id references Certificate table")
+    requested_by: UUID = Field(..., description="Customer who request to revok cert.")
+    reason: Optional[str] = Field(default=None, description="Reason of requester.")
+
+
+class RevocationRequestCreate(RevocationRequestBase):
+    status: Optional[CertificateRequestStatus] = CertificateRequestStatus.PENDING
+
+
+class RevocationRequestUpdate(BaseModel):
+    status: Optional[CertificateRequestStatus] = None
+    approved_by: Optional[UUID] = None
+    approved_at: Optional[datetime] = None
+
+
+class RevocationRequest(RevocationRequestBase):
+    id: UUID
+    user_id: UUID
+    status: CertificateRequestStatus = Field(default=CertificateRequestStatus.PENDING)
+    approved_by: Optional[UUID] = None
+    approved_at: Optional[datetime] = None
+    created_at: datetime
+
+    class ConfigDict:
+        from_attributes = True
+
 class RevocationBase(BaseModel):
     certificate_id: UUID
     serial_number: str
