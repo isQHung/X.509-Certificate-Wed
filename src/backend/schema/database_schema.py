@@ -375,6 +375,7 @@ class AuditLogFilters(PaginationParams):
     actor_id: Optional[UUID] = None
     action: Optional[str] = None
     target_type: Optional[str] = None
+    target_id: Optional[str] = None
     date_from: Optional[datetime] = None
     date_to: Optional[datetime] = None
 
