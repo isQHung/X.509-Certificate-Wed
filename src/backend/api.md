@@ -1,0 +1,328 @@
+# Tài liệu Tích hợp API (API Documentation)
+
+**Base URL:** `/api/v1`
+**Content-Type:** `application/json`
+
+---
+
+## 🔐 Headers
+
+All APIs require:
+
+- `Content-Type: application/json`
+- `Authorization: Bearer <token>` _(nếu có authentication)_
+
+---
+
+## 1. Customer APIs (Người dùng / Khách hàng)
+
+Các API xử lý yêu cầu liên quan đến Certificate Signing Request (CSR) và quản lý vòng đời chứng chỉ của người dùng.
+
+---
+
+### 1.1 Tạo yêu cầu cấp chứng thư (Create CSR)
+
+- **Endpoint:** `/cert_request`
+- **Method:** `POST`
+
+#### Request Body
+
+```json
+{
+  "user_id": "11111111-2222-3333-4444-555555555555",
+  "csr_pem": "-----BEGIN CERTIFICATE REQUEST-----\nMIICtjCCAZ4C...\n-----END CERTIFICATE REQUEST-----",
+  "subject": {
+    "CN": "example.com",
+    "O": "MyCompany",
+    "C": "VN"
+  }
+}
+```
+
+#### Response
+
+**Success (200):**
+
+```json
+{
+  "message": "CSR created successfully",
+  "request_id": "3f9971ed-78f4-4d89-8e0d-d1978d3ab945"
+}
+```
+
+**Error (400):**
+
+```json
+{
+  "error": "Invalid input data"
+}
+```
+
+---
+
+### 1.2 Hủy yêu cầu cấp chứng thư (Cancel CSR)
+
+- **Endpoint:** `/cert_request/{req_id}/cancel`
+- **Method:** `POST`
+
+#### Path Parameters
+
+- `req_id` (UUID): ID của yêu cầu CSR
+
+#### Example
+
+```bash
+POST /api/v1/cert_request/123e4567-e89b-12d3-a456-426614174000/cancel
+```
+
+#### Response
+
+**Success (200):**
+
+```json
+{
+  "message": "CSR cancelled successfully",
+  "request_id": "3f9971ed-78f4-4d89-8e0d-d1978d3ab945"
+}
+```
+
+**Error (400):**
+
+```json
+{
+  "error": "CSR not found"
+}
+```
+
+---
+
+### 1.3 Yêu cầu thu hồi chứng chỉ (Request Revocation)
+
+API cho phép khách hàng chủ động báo mất Private Key hoặc yêu cầu thu hồi chứng chỉ của mình. Yêu cầu sẽ được chuyển sang trạng thái chờ Admin duyệt.
+
+- **Endpoint:** `/user/revoke/{serial_number}/request`
+- **Method:** `POST`
+
+#### Path Parameters
+
+- `serial_number` (String): Số Serial của chứng chỉ cần thu hồi.
+
+#### Request Body
+
+```json
+{
+  "reason": "Bị lộ Private Key"
+}
+```
+
+#### Response
+
+**Success (201):**
+
+```json
+{
+  "success": true,
+  "message": "Da gui yeu cau thu hoi cho chung chi ABC123456789 thanh cong. Vui long cho Admin duyet."
+}
+```
+
+**Error (400):**
+
+```json
+{
+  "success": false,
+  "message": "Chứng chỉ này hiện đang 'revoked', không thể gửi yêu cầu thu hồi."
+}
+```
+
+---
+
+### 1.4 Hủy yêu cầu thu hồi chứng chỉ (Cancel Revocation Request)
+
+API cho phép khách hàng hủy bỏ đơn yêu cầu thu hồi chứng chỉ của mình (chỉ áp dụng khi đơn vẫn đang ở trạng thái chờ duyệt `pending`).
+
+- **Endpoint:** `/user/revoke/{serial_number}/cancel`
+- **Method:** `POST`
+
+#### Path Parameters
+
+- `serial_number` (String): Số Serial của chứng chỉ cần hủy đơn yêu cầu.
+
+#### Example
+
+```bash
+POST /api/v1/user/revoke/ABC123456789/cancel
+```
+
+#### Response
+
+**Success (200):**
+
+```json
+{
+  "success": true,
+  "message": "Da huy yeu cau thu hoi cho chung chi ABC123456789 thanh cong."
+}
+```
+
+**Error (400):**
+
+```json
+{
+  "success": false,
+  "message": "Không tìm thấy yêu cầu thu hồi nào đang chờ duyệt cho Serial: ABC123456789"
+}
+```
+
+---
+
+## 2. Admin APIs (Quản trị viên)
+
+Các API dành cho admin để quản lý và xử lý CSR cũng như các yêu cầu khác.
+
+---
+
+### 2.1 Danh sách yêu cầu chờ duyệt (List Pending CSRs)
+
+- **Endpoint:** `/approve/list`
+- **Method:** `GET`
+
+#### Response
+
+**Success (200):**
+
+```json
+[
+  {
+    "id": "858ef4ad-ada7-44e7-bf37-ca60a4f4d608",
+    "user_id": "11111111-2222-3333-4444-555555555555",
+    "status": "pending",
+    "created_at": "Thu, 26 Mar 2026 07:18:58 GMT",
+    "approved_at": null,
+    "approved_by": null,
+    "csr_pem": "",
+    "san": null,
+    "subject": {
+      "CN": "Test Admin Approval"
+    }
+  },
+  {
+    "id": "3f9971ed-78f4-4d89-8e0d-d1978d3ab945",
+    "user_id": "11111111-2222-3333-4444-555555555555",
+    "status": "pending",
+    "created_at": "Tue, 31 Mar 2026 13:51:37 GMT",
+    "approved_at": null,
+    "approved_by": null,
+    "csr_pem": "...pem content...",
+    "san": ["example.com", "www.example.com"],
+    "subject": {
+      "commonName": "example.com",
+      "countryName": "VN",
+      "organizationName": "MyCompany"
+    }
+  }
+]
+```
+
+**Error (400):**
+
+```json
+{
+  "error": "Something went wrong"
+}
+```
+
+---
+
+### 2.2 Phê duyệt yêu cầu (Approve CSR)
+
+- **Endpoint:** `/approve/{id}/approve`
+- **Method:** `POST`
+
+#### Path Parameters
+
+- `id` (UUID): ID của CSR
+
+#### Example
+
+```bash
+POST /api/v1/approve/123e4567-e89b-12d3-a456-426614174000/approve
+```
+
+#### Response
+
+**Success (200):**
+
+```json
+{
+  "message": "CSR approved successfully",
+  "serial": "ABC123456789"
+}
+```
+
+**Error (400):**
+
+```json
+{
+  "error": "CSR not found"
+}
+```
+
+---
+
+### 2.3 Từ chối yêu cầu (Reject CSR)
+
+- **Endpoint:** `/approve/{id}/reject`
+- **Method:** `POST`
+
+#### Path Parameters
+
+- `id` (UUID): ID của CSR
+
+#### Example
+
+```bash
+POST /api/v1/approve/123e4567-e89b-12d3-a456-426614174000/reject
+```
+
+#### Response
+
+**Success (200):**
+
+```json
+{
+  "message": "CSR rejected"
+}
+```
+
+**Error (400):**
+
+```json
+{
+  "error": "CSR not found"
+}
+```
+
+---
+
+## 📌 Ghi chú
+
+### Trạng thái yêu cầu (Status)
+
+- `pending`: Đang chờ duyệt
+- `approved`: Đã được duyệt/cấp chứng thư
+- `rejected`: Bị từ chối
+- `cancelled`: Đã bị hủy bởi người dùng
+
+---
+
+## 🎯 Tổng kết
+
+- Tất cả API trả về dữ liệu dạng JSON
+- Status code chính:
+  - `200`: Thành công (OK)
+  - `201`: Tạo tài nguyên/yêu cầu thành công (Created)
+  - `400`: Lỗi phía client, lỗi logic xử lý (Bad Request)
+  - `500`: Lỗi hệ thống máy chủ (Internal Server Error)
+
+---
