@@ -4,6 +4,7 @@ from .v1.user_revoke import user_revoke_bp
 from .v1.admin_revoke import revoke_bp
 from .v1.approve import admin_bp
 from .v1.cert_request import customer_bp
+from .v1.crl import crl_bp
 
 routes = Blueprint('routes', __name__, url_prefix='/api')
 

@@ -4,6 +4,8 @@ from datetime import datetime
 from typing import Optional, List
 from enum import Enum
 
+from schema.database_schema import CRL
+
 class CertificateRequestStatus(str, Enum):
     PENDING = "pending"
     APPROVED = "approved"
@@ -28,4 +30,9 @@ class CSRItemResponse(BaseModel):
     
 class ListPendingCSRResponse(BaseModel):
     pending_requests: List[CSRItemResponse]
+
+
+class GenerateCrlResponse(BaseModel):
+    crl: CRL
+    revocations_moved: int
 
