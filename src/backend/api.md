@@ -390,6 +390,66 @@ POST /api/v1/approve/123e4567-e89b-12d3-a456-426614174000/reject
 
 ---
 
+### 2.6 Nhật ký hệ thống (Audit Logs)
+
+* **Endpoint:** `/audit_logs/`
+* **Method:** `GET`
+
+#### Query Parameters (optional)
+
+* `page` (int, default: 1)
+* `limit` (int, default: 10, max: 100)
+* `sort_by` (string, default: `created_at`) — one of: `id`, `created_at`, `action`, `target_type`, `target_id`, `actor_id`
+* `sort_order` (`asc`|`desc`, default: `desc`)
+* `actor_id` (uuid)
+* `action` (string)
+* `target_type` (string)
+* `target_id` (string)
+* `date_from` (ISO8601 datetime)
+* `date_to` (ISO8601 datetime)
+
+#### Response
+
+**Success (200):**
+
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "actor_id": null,
+      "action": "INSERT",
+      "target_type": "certificates",
+      "target_id": "8c3d6903-3eaa-4db9-bfcb-7f9024d14b77",
+      "metadata": null,
+      "created_at": "2026-04-01T16:25:22.124560+00:00"
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "limit": 10,
+  "total_pages": 1
+}
+```
+
+**Error (400):**
+
+```json
+{
+  "error": "Invalid UUID"
+}
+```
+
+**Error (500):**
+
+```json
+{
+  "error": "Internal server error"
+}
+```
+
+---
+
 ## 📌 Ghi chú
 
 ### Trạng thái yêu cầu (Status)
