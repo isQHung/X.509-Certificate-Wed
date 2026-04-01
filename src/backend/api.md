@@ -305,6 +305,91 @@ POST /api/v1/approve/123e4567-e89b-12d3-a456-426614174000/reject
 
 ---
 
+### 2.4 Tạo CRL mới (Generate CRL)
+
+* **Endpoint:** `/crl`
+* **Method:** `GET`
+
+#### Mô tả luồng xử lý
+
+* Lấy các bản ghi từ bảng `revocations`
+* Chuyển các bản ghi này sang bảng `crl_entries` với `crl_id` mới
+* Xóa các bản ghi đã chuyển trong `revocations`
+* Lấy toàn bộ serial trong `crl_entries` để build CRL
+* Ký CRL bằng CA key/cert và lưu vào bảng `crl`
+
+#### Response
+
+**Success (200):**
+
+```json
+{
+  "crl": {
+    "id": "8c3d6903-3eaa-4db9-bfcb-7f9024d14b77",
+    "version": 1,
+    "generated_at": "2026-04-01T16:25:22.124560+00:00",
+    "next_update": "2026-04-02T16:25:22.124560+00:00",
+    "crl_pem": "-----BEGIN X509 CRL-----\nMIIB...snip...\n-----END X509 CRL-----\n"
+  },
+  "revocations_moved": 3
+}
+```
+
+**Error (400):**
+
+```json
+{
+  "error": "KEY_PATH_CA và CERT_PATH_CA phải được cấu hình"
+}
+```
+
+**Error (500):**
+
+```json
+{
+  "error": "Internal server error"
+}
+```
+
+---
+
+### 2.5 Lấy CRL mới nhất (Get Latest CRL)
+
+* **Endpoint:** `/crl/latest`
+* **Method:** `GET`
+
+#### Response
+
+**Success (200):**
+
+```json
+{
+  "id": "8c3d6903-3eaa-4db9-bfcb-7f9024d14b77",
+  "version": 1,
+  "generated_at": "2026-04-01T16:25:22.124560+00:00",
+  "next_update": "2026-04-02T16:25:22.124560+00:00",
+  "crl_pem": "-----BEGIN X509 CRL-----\nMIIB...snip...\n-----END X509 CRL-----\n"
+}
+```
+
+**Error (404):**
+
+```json
+{
+  "error": "Chưa có CRL nào được tạo"
+}
+```
+
+**Error (500):**
+
+```json
+{
+  "error": "Internal server error"
+}
+```
+
+---
+
 ## 📌 Ghi chú
 
 ### Trạng thái yêu cầu (Status)

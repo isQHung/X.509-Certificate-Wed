@@ -210,6 +210,13 @@ class CRL(CRLBase):
         from_attributes = True
 
 
+class CRLUpdate(BaseModel):
+    version: Optional[int] = None
+    generated_at: Optional[datetime] = None
+    next_update: Optional[datetime] = None
+    crl_pem: Optional[str] = None
+
+
 class CRLEntryBase(BaseModel):
     crl_id: UUID
     serial_number: str
@@ -219,6 +226,13 @@ class CRLEntryBase(BaseModel):
 
 class CRLEntryCreate(CRLEntryBase):
     pass
+
+
+class CRLEntryUpdate(BaseModel):
+    crl_id: Optional[UUID] = None
+    serial_number: Optional[str] = None
+    revoked_at: Optional[datetime] = None
+    reason: Optional[str] = None
 
 
 class CRLEntry(CRLEntryBase):
