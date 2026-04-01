@@ -14,4 +14,5 @@ routes.register_blueprint(admin_bp)
 routes.register_blueprint(revoke_bp)
 routes.register_blueprint(user_revoke_bp)
 routes.register_blueprint(customer_bp)
-
+routes.register_blueprint(crl_bp)
+routes.register_blueprint(audit_logs_bp)
