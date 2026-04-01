@@ -55,11 +55,6 @@ class RevocationRequestService:
             
         request_id = req_res.data[0]["id"]
 
-        # 2. Cập nhật trạng thái đơn thành 'cancelled' (đã hủy bởi user)
-        # Lưu ý: DB của m phải cho phép status 'cancelled' trong bảng revocation_requests.
-        # Nếu thiết kế của m là xóa hẳn dòng đó đi thì dùng: supabase.table("revocation_requests").delete().eq("id", request_id).execute()
-        # supabase.table("revocation_requests").update({
-        #     "status": "cancelled"
-        # }).eq("id", request_id).execute()
+
         supabase.table("revocation_requests").delete().eq("id", request_id).execute()
         return True
