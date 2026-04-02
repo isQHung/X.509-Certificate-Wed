@@ -5,8 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const [role, setRole] = useState("");
-  const pathname = usePathname(); // Lấy đường dẫn hiện tại để highlight menu
+  const [role, setRole] = useState<string | null>(null);
+  const pathname = usePathname();
 
   useEffect(() => {
     setRole(localStorage.getItem("userRole") || "CUSTOMER");
@@ -27,8 +27,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: "Chứng chỉ của tôi", icon: "👤", path: "/dashboard/user/certificates" },
     { name: "Tạo cặp khóa cá nhân", icon: "🔐", path: "/dashboard/user/keys" },
     { name: "Gửi yêu cầu CSR", icon: "📨", path: "/dashboard/user/csr" },
-    { name: "Tra cứu CRL", icon: "🔍", path: "/dashboard/user/crl-lookup" },
+    { name: "Tra cứu CRL", icon: "🔍", path: "/dashboard/user/crl" },
   ];
+
+  if (role === null) return <div className="min-h-screen bg-slate-50" />;
 
   const menu = role === "ADMIN" ? adminMenu : userMenu;
 
@@ -47,7 +49,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Link href="/dashboard" className="text-xl font-black text-indigo-600 uppercase tracking-tighter block">
             X.509 System
           </Link>
-          <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Admin Dashboard</p>
+          {/* Subtitle thay đổi theo Role */}
+          <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">
+            {role === "ADMIN" ? "Hệ thống Quản trị" : "Trung tâm người dùng"}
+          </p>
         </div>
         
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
@@ -78,7 +83,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-10">
+      <main className="flex-1 p-10 overflow-y-auto">
         <div className="max-w-6xl mx-auto">
             {children}
         </div>
