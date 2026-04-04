@@ -27,6 +27,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: "Chứng chỉ của tôi", icon: "👤", path: "/dashboard/user/certificates" },
     { name: "Tạo cặp khóa cá nhân", icon: "🔐", path: "/dashboard/user/keys" },
     { name: "Gửi yêu cầu CSR", icon: "📨", path: "/dashboard/user/csr" },
+    { name: "Kiểm tra chứng chỉ", icon: "🔎", path: "/dashboard/user/certificate-inspector" },
     { name: "Tra cứu CRL", icon: "🔍", path: "/dashboard/user/crl" },
   ];
 
