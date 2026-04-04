@@ -43,6 +43,46 @@ def test_create_csr_success(mock_create_csr, client):
     mock_create_csr.assert_called_once_with(payload)
 
 
+@patch("api.v1.cert_request.generate_csr")
+def test_generate_csr_success(mock_generate_csr, client):
+    payload = {
+        "subject": {
+            "CN": "example.com",
+            "O": "Test Org"
+        },
+        "san": ["example.com", "www.example.com"]
+    }
+
+    mock_generate_csr.return_value = {
+        "request_id": "1234",
+        "csr_pem": "-----BEGIN CERTIFICATE REQUEST-----\n...\n-----END CERTIFICATE REQUEST-----",
+        "private_key_pem": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----",
+    }
+
+    response = client.post("/v1/cert_request/generate", json=payload)
+
+    assert response.status_code == 200
+    assert response.json["message"] == "CSR generated successfully"
+    assert response.json["request_id"] == "1234"
+    assert "csr_pem" in response.json
+    assert "private_key_pem" in response.json
+
+    mock_generate_csr.assert_called_once_with(payload)
+
+
+@patch("api.v1.cert_request.generate_csr")
+def test_generate_csr_fail(mock_generate_csr, client):
+    payload = {"subject": {}}
+    mock_generate_csr.side_effect = Exception("Common Name is required")
+
+    response = client.post("/v1/cert_request/generate", json=payload)
+
+    assert response.status_code == 400
+    assert "Common Name is required" in response.json["error"]
+
+    mock_generate_csr.assert_called_once_with(payload)
+
+
 # =========================
 # 2. CREATE CSR FAIL
 # =========================
