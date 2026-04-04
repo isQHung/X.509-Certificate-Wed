@@ -34,10 +34,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const menu = role === "ADMIN" ? adminMenu : userMenu;
 
-  const handleLogout = () => {
-    Cookies.remove("token");
-    Cookies.remove("userRole");
-    localStorage.clear();
+  // const handleLogout = () => {
+  //   Cookies.remove("token");
+  //   Cookies.remove("userRole");
+  //   localStorage.clear();
+  //   window.location.href = "/login";
+  // };
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      credentials: "include", // ⚠️ bắt buộc
+    });
+
+    localStorage.clear(); // chỉ xóa data phụ
+
     window.location.href = "/login";
   };
 

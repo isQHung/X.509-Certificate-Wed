@@ -1,96 +1,52 @@
-import pytest
+import unittest
 import jwt
-from datetime import datetime, timedelta, timezone
 from flask import Flask, jsonify, request
-from functools import wraps
-import warnings
-warnings.filterwarnings("ignore", category=UserWarning, module="jwt")
+from api.middleware import jwt_middleware, SECRET_KEY # Import từ file của bạn
 
-# --- 1. SETUP MÔI TRƯỜNG TEST ---
-SESSION_SECRET = "QNTgNiGccIsYWwwgFNpWHQpnG70kfPvzgS9n+kMV27wXDWxaUCRa/wmLJolU+BM572mnWO9NdOmK5bnFwCgdCw=="
-COOKIE_NAME = "session_token"
+class TestAuthMiddleware(unittest.TestCase):
+    def setUp(self):
+        self.app = Flask(__name__)
+        self.client = self.app.test_client()
 
-app = Flask(__name__)
-app.config['TESTING'] = True
+        @self.app.before_request
+        def middleware():
+            return jwt_middleware()
 
-# Middleware cần test
-def session_cookie_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        token = request.cookies.get(COOKIE_NAME)
+        @self.app.route('/api/v1/test', methods=['GET'])
+        def test_route():
+            return jsonify({"data": "success"}), 200
+
+    # Test Case 1: Thành công với Token hợp lệ
+    def test_valid_token(self):
+        payload = {"user_id": 1, "username": "admin", "role": "ADMIN"}
+        token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
         
-        if not token:
-            # Chưa login -> 401
-            return jsonify({'error': 'Unauthorized'}), 401
-            
-        try:
-            payload = jwt.decode(token, SESSION_SECRET, algorithms=["HS256"])
-            request.user = payload
-        except jwt.ExpiredSignatureError:
-            return jsonify({'error': 'Token expired'}), 401
-        except jwt.InvalidTokenError:
-            # Cookie giả mạo -> 403
-            return jsonify({'error': 'Forbidden'}), 403
-            
-        return f(*args, **kwargs)
-    return decorated
+        # Gửi request kèm cookie
+        self.client.set_cookie(
+            key='session_token',
+            value=token
+        )
+        response = self.client.get('/api/v1/test')
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"success", response.data)
 
-# API Route dùng để test
-@app.route('/api/v1/dashboard', methods=['GET'])
-@session_cookie_required
-def dashboard():
-    return jsonify({"message": "Success", "user": request.user}), 200
+    # Test Case 2: Thất bại khi thiếu Token (401)
+    def test_missing_token(self):
+        response = self.client.get('/api/v1/test')
+        self.assertEqual(response.status_code, 401)
+        self.assertIn(b"Missing token", response.data)
 
-# Fixture tạo test client của Flask
-@pytest.fixture
-def client():
-    with app.test_client() as client:
-        yield client
+    # Test Case 3: Thất bại với Token giả mạo/sai Secret (401/403)
+    def test_invalid_token(self):
+        token = "fake.token.value"
+        self.client.set_cookie(
+            key='session_token',
+            value=token
+        )
+        response = self.client.get('/api/v1/test')
+        self.assertEqual(response.status_code, 401)
+        self.assertIn(b"Invalid token", response.data)
 
-# Hàm hỗ trợ tạo token hợp lệ
-def create_valid_token():
-    payload = {
-        "sub": "user-123",
-        "role": "ADMIN",
-        # Dùng datetime timezone-aware UTC
-        "exp": datetime.now(timezone.utc) + timedelta(hours=1)
-    }
-    return jwt.encode(payload, SESSION_SECRET, algorithm="HS256")
-
-# --- 2. CÁC TEST CASE ---
-
-def test_success_flow(client):
-    token = create_valid_token()
-    client.set_cookie(
-        key=COOKIE_NAME,
-        value=token,
-        domain='localhost'  # optional
-    )
-    response = client.get('/api/v1/dashboard')
-    assert response.status_code == 200
-    assert response.json['message'] == "Success"
-    assert response.json['user']['sub'] == "user-123"
-    
-def test_fail_unauthorized_flow(client):
-    """
-    [Chưa login]: Gọi API không có Cookie.
-    Expected: 401 Unauthorized.
-    """
-    response = client.get('/api/v1/dashboard')
-    
-    assert response.status_code == 401
-    assert response.json['error'] == 'Unauthorized'
-
-def test_fail_forged_cookie_flow(client):
-    fake_secret = "hacker-secret-key"
-    fake_payload = {"sub": "hacker-999", "role": "ADMIN"}
-    forged_token = jwt.encode(fake_payload, fake_secret, algorithm="HS256")
-
-    client.set_cookie(
-        key=COOKIE_NAME,
-        value=forged_token,
-        domain='localhost'
-    )
-    response = client.get('/api/v1/dashboard')
-    assert response.status_code == 403
-    assert response.json['error'] == 'Forbidden'
+if __name__ == '__main__':
+    unittest.main()

@@ -2,12 +2,10 @@ from flask import Flask, request, jsonify
 import os
 from datetime import datetime
 from api.routes import routes
-from api.auth_routes import auth_routes
 from flask_cors import CORS
 app = Flask(__name__)
 CORS(app,supports_credentials=True,origins=["http://localhost:3000"]) 
 app.register_blueprint(routes)
-app.register_blueprint(auth_routes)
 
 # Health check endpoint
 @app.route("/health", methods=["GET"])
