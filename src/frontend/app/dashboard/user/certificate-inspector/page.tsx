@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import CertificateUploadForm from '@/components/certificate/CertificateUploadForm';
-import CertificateDisplay from '@/components/certificate/CertificateDisplay';
+import { useState } from "react";
+import CertificateUploadForm from "@/components/certificate/CertificateUploadForm";
+import CertificateDisplay from "@/components/certificate/CertificateDisplay";
 
 interface CertificateInfo {
   serial: string;
@@ -22,7 +22,8 @@ interface CertificateInfo {
 }
 
 export default function CertificateInspectorPage() {
-  const [certificateInfo, setCertificateInfo] = useState<CertificateInfo | null>(null);
+  const [certificateInfo, setCertificateInfo] =
+    useState<CertificateInfo | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,22 +33,22 @@ export default function CertificateInspectorPage() {
 
     try {
       const formData = new FormData();
-      formData.append('certificate', file);
+      formData.append("certificate", file);
 
-      const response = await fetch('/api/v1/certificate/inspect', {
-        method: 'POST',
+      const response = await fetch("/api/v1/certificate/inspect", {
+        method: "POST",
         body: formData,
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to inspect certificate');
+        throw new Error(errorData.error || "Failed to inspect certificate");
       }
 
       const data = await response.json();
       setCertificateInfo(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error occurred');
+      setError(err instanceof Error ? err.message : "Unknown error occurred");
       setCertificateInfo(null);
     } finally {
       setIsLoading(false);
@@ -57,16 +58,22 @@ export default function CertificateInspectorPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-bold text-slate-900">Kiểm tra chứng chỉ</h1>
+        <h1 className="text-2xl font-bold text-slate-900">
+          Kiểm tra chứng chỉ
+        </h1>
         <p className="text-sm text-slate-500">
-          Tải lên và kiểm tra thông tin chi tiết của chứng chỉ X.509 (.crt, .pem, .cer, .der)
+          Tải lên và kiểm tra thông tin chi tiết của chứng chỉ X.509 (.crt,
+          .pem, .cer, .der)
         </p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Upload Form */}
         <div className="lg:col-span-1">
-          <CertificateUploadForm onFileUpload={handleFileUpload} isLoading={isLoading} />
+          <CertificateUploadForm
+            onFileUpload={handleFileUpload}
+            isLoading={isLoading}
+          />
         </div>
 
         {/* Certificate Display */}
@@ -90,7 +97,9 @@ export default function CertificateInspectorPage() {
 
           {!certificateInfo && !isLoading && !error && (
             <div className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-8 text-center">
-              <p className="text-slate-500 text-sm">Tải lên một chứng chỉ để xem chi tiết</p>
+              <p className="text-slate-500 text-sm">
+                Tải lên một chứng chỉ để xem chi tiết
+              </p>
             </div>
           )}
         </div>

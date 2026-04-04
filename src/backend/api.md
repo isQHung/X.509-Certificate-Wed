@@ -307,16 +307,16 @@ POST /api/v1/approve/123e4567-e89b-12d3-a456-426614174000/reject
 
 ### 2.4 Tạo CRL mới (Generate CRL)
 
-* **Endpoint:** `/crl`
-* **Method:** `GET`
+- **Endpoint:** `/crl`
+- **Method:** `GET`
 
 #### Mô tả luồng xử lý
 
-* Lấy các bản ghi từ bảng `revocations`
-* Chuyển các bản ghi này sang bảng `crl_entries` với `crl_id` mới
-* Xóa các bản ghi đã chuyển trong `revocations`
-* Lấy toàn bộ serial trong `crl_entries` để build CRL
-* Ký CRL bằng CA key/cert và lưu vào bảng `crl`
+- Lấy các bản ghi từ bảng `revocations`
+- Chuyển các bản ghi này sang bảng `crl_entries` với `crl_id` mới
+- Xóa các bản ghi đã chuyển trong `revocations`
+- Lấy toàn bộ serial trong `crl_entries` để build CRL
+- Ký CRL bằng CA key/cert và lưu vào bảng `crl`
 
 #### Response
 
@@ -362,6 +362,7 @@ API cho phép người dùng tải lên một file chứng chỉ và nhận về
 #### Request
 
 **Form Data:**
+
 - `certificate` (file): Tệp chứng chỉ X.509 (.crt, .pem, .cer, .der)
   - **Max size:** 1MB
 
@@ -511,9 +512,10 @@ curl -X POST http://localhost:5000/api/v1/certificate/inspect \
 - **public_key_type**: Loại thuật toán khóa công khai (RSAPublicKey, EllipticCurvePublicKey)
 
 {
-  "error": "KEY_PATH_CA và CERT_PATH_CA phải được cấu hình"
+"error": "KEY_PATH_CA và CERT_PATH_CA phải được cấu hình"
 }
-```
+
+````
 
 **Error (500):**
 
@@ -521,14 +523,14 @@ curl -X POST http://localhost:5000/api/v1/certificate/inspect \
 {
   "error": "Internal server error"
 }
-```
+````
 
 ---
 
 ### 2.5 Lấy CRL mới nhất (Get Latest CRL)
 
-* **Endpoint:** `/crl/latest`
-* **Method:** `GET`
+- **Endpoint:** `/crl/latest`
+- **Method:** `GET`
 
 #### Response
 
@@ -564,21 +566,21 @@ curl -X POST http://localhost:5000/api/v1/certificate/inspect \
 
 ### 2.6 Nhật ký hệ thống (Audit Logs)
 
-* **Endpoint:** `/audit_logs/`
-* **Method:** `GET`
+- **Endpoint:** `/audit_logs/`
+- **Method:** `GET`
 
 #### Query Parameters (optional)
 
-* `page` (int, default: 1)
-* `limit` (int, default: 10, max: 100)
-* `sort_by` (string, default: `created_at`) — one of: `id`, `created_at`, `action`, `target_type`, `target_id`, `actor_id`
-* `sort_order` (`asc`|`desc`, default: `desc`)
-* `actor_id` (uuid)
-* `action` (string)
-* `target_type` (string)
-* `target_id` (string)
-* `date_from` (ISO8601 datetime)
-* `date_to` (ISO8601 datetime)
+- `page` (int, default: 1)
+- `limit` (int, default: 10, max: 100)
+- `sort_by` (string, default: `created_at`) — one of: `id`, `created_at`, `action`, `target_type`, `target_id`, `actor_id`
+- `sort_order` (`asc`|`desc`, default: `desc`)
+- `actor_id` (uuid)
+- `action` (string)
+- `target_type` (string)
+- `target_id` (string)
+- `date_from` (ISO8601 datetime)
+- `date_to` (ISO8601 datetime)
 
 #### Response
 
