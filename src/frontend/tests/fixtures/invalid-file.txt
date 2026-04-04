@@ -1,0 +1,1 @@
+This is a plain text file used to verify that the certificate upload validator rejects unsupported file types.

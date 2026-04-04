@@ -1,9 +1,16 @@
-from flask import Flask, request, jsonify
 import os
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load environment variables from .env file FIRST
+load_dotenv()
+
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 from api.routes import routes
 
 app = Flask(__name__)
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 app.register_blueprint(routes)
 
 

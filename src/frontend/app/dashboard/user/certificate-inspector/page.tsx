@@ -27,6 +27,10 @@ export default function CertificateInspectorPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const backendBaseUrl =
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+  const certificateInspectUrl = `${backendBaseUrl.replace(/\/+$/, "")}/api/v1/certificate/inspect`;
+
   const handleFileUpload = async (file: File) => {
     setIsLoading(true);
     setError(null);
@@ -35,7 +39,7 @@ export default function CertificateInspectorPage() {
       const formData = new FormData();
       formData.append("certificate", file);
 
-      const response = await fetch("/api/v1/certificate/inspect", {
+      const response = await fetch(certificateInspectUrl, {
         method: "POST",
         body: formData,
       });
