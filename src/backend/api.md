@@ -339,6 +339,178 @@ POST /api/v1/approve/123e4567-e89b-12d3-a456-426614174000/reject
 
 ```json
 {
+  "error": "No pending revocations to process"
+}
+```
+
+---
+
+## 3. Certificate Inspector APIs (Kiểm tra chứng chỉ)
+
+Các API dành cho việc kiểm tra và phân tích chứng chỉ X.509 được tải lên.
+
+---
+
+### 3.1 Kiểm tra chứng chỉ (Inspect Certificate)
+
+API cho phép người dùng tải lên một file chứng chỉ và nhận về thông tin chi tiết của chứng chỉ đó, bao gồm: số serial, subject, issuer, thời gian hiệu lực, và các extension.
+
+- **Endpoint:** `/certificate/inspect`
+- **Method:** `POST`
+- **Content-Type:** `multipart/form-data`
+
+#### Request
+
+**Form Data:**
+- `certificate` (file): Tệp chứng chỉ X.509 (.crt, .pem, .cer, .der)
+  - **Max size:** 1MB
+
+**Example (cURL):**
+
+```bash
+curl -X POST http://localhost:5000/api/v1/certificate/inspect \
+  -F "certificate=@google-cert.crt"
+```
+
+#### Response
+
+**Success (200):**
+
+```json
+{
+  "serial": "372266101174506267343589765652916372903",
+  "subject": {
+    "commonName": "www.google.com",
+    "organizationName": "Google LLC",
+    "countryName": "US",
+    "localityName": "Mountain View",
+    "stateOrProvinceName": "CA"
+  },
+  "issuer": {
+    "commonName": "GTS CA 1C3",
+    "organizationName": "Google Trust Services LLC",
+    "countryName": "US"
+  },
+  "validity": {
+    "not_before": "2025-10-13T08:02:26+00:00",
+    "not_after": "2026-01-11T08:02:25+00:00",
+    "is_valid": true
+  },
+  "extensions": [
+    {
+      "name": "Basic Constraints",
+      "critical": true,
+      "value": {
+        "ca": false,
+        "path_length": null
+      }
+    },
+    {
+      "name": "Key Usage",
+      "critical": true,
+      "value": {
+        "digital_signature": true,
+        "content_commitment": false,
+        "key_encipherment": true,
+        "data_encipherment": false,
+        "key_agreement": false,
+        "key_cert_sign": false,
+        "crl_sign": false,
+        "encipher_only": false,
+        "decipher_only": false
+      }
+    },
+    {
+      "name": "Subject Alternative Names",
+      "critical": false,
+      "value": [
+        {
+          "type": "DNS",
+          "value": "www.google.com"
+        },
+        {
+          "type": "DNS",
+          "value": "google.com"
+        }
+      ]
+    },
+    {
+      "name": "Authority Information Access",
+      "critical": false,
+      "value": [
+        {
+          "method": "caIssuers",
+          "location": "http://pki.goog/repo/certs/gts1c3.der"
+        },
+        {
+          "method": "OCSP",
+          "location": "http://ocsp.pki.goog/gts1c3"
+        }
+      ]
+    }
+  ],
+  "public_key_type": "RSAPublicKey"
+}
+```
+
+**Error (400) - Invalid file type:**
+
+```json
+{
+  "error": "Invalid file type. Accepted types: crt, pem, cer, der"
+}
+```
+
+**Error (400) - File size exceeded:**
+
+```json
+{
+  "error": "File size exceeds maximum allowed (1MB)"
+}
+```
+
+**Error (400) - Invalid certificate:**
+
+```json
+{
+  "error": "Invalid certificate format: [error details]"
+}
+```
+
+**Error (500) - Server error:**
+
+```json
+{
+  "error": "Failed to process certificate: [error details]"
+}
+```
+
+---
+
+## Field Descriptions
+
+### Certificate Information Fields
+
+- **serial**: Số serial của chứng chỉ (dạng thập phân)
+- **subject**: Thông tin chủ thể (DN - Distinguished Name) của chứng chỉ
+  - **commonName** (CN): Tên miền / Tên chủ thể
+  - **organizationName** (O): Tên công ty / tổ chức
+  - **organizationalUnitName** (OU): Tên bộ phận
+  - **countryName** (C): Mã quốc gia (2 chữ cái)
+  - **stateOrProvinceName** (ST): Tên tỉnh/bang
+  - **localityName** (L): Tên thành phố
+- **issuer**: Thông tin tổ chức phát hành chứng chỉ (DN format)
+- **validity**: Thời gian hiệu lực
+  - **not_before**: Thời điểm bắt đầu hiệu lực (ISO 8601)
+  - **not_after**: Thời điểm hết hiệu lực (ISO 8601)
+  - **is_valid**: Trạng thái hiện tại (true: hợp lệ, false: hết hạn)
+- **extensions**: Danh sách các extension của chứng chỉ
+  - **name**: Tên extension
+  - **critical**: Có phải extension quan trọng (bắt buộc phải hiểu để sử dụng)
+  - **value**: Nội dung extension (dạng khác nhau tùy extension)
+- **public_key_type**: Loại thuật toán khóa công khai (RSAPublicKey, EllipticCurvePublicKey)
+
+{
   "error": "KEY_PATH_CA và CERT_PATH_CA phải được cấu hình"
 }
 ```
