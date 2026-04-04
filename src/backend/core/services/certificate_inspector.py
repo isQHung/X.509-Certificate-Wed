@@ -5,7 +5,7 @@ Parses X.509 certificates and extracts relevant information
 
 from cryptography import x509
 from cryptography.x509.oid import ExtensionOID, NameOID
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 import json
 
@@ -50,12 +50,13 @@ class CertificateInspector:
         """Extract serial number"""
         return str(self.certificate.serial_number)
     
-    def extract_validity(self) -> Dict[str, str]:
+    def extract_validity(self) -> Dict[str, Any]:
         """Extract certificate validity period"""
+        now = datetime.now(timezone.utc)
         return {
             "not_before": self.certificate.not_valid_before_utc.isoformat(),
             "not_after": self.certificate.not_valid_after_utc.isoformat(),
-            "is_valid": self.certificate.not_valid_before_utc <= datetime.utcnow() <= self.certificate.not_valid_after_utc
+            "is_valid": self.certificate.not_valid_before_utc <= now <= self.certificate.not_valid_after_utc
         }
     
     def extract_extensions(self) -> List[Dict[str, Any]]:
@@ -94,8 +95,8 @@ class CertificateInspector:
                     "key_agreement": key_usage.value.key_agreement,
                     "key_cert_sign": key_usage.value.key_cert_sign,
                     "crl_sign": key_usage.value.crl_sign,
-                    "encipher_only": key_usage.value.encipher_only if hasattr(key_usage.value, 'encipher_only') else False,
-                    "decipher_only": key_usage.value.decipher_only if hasattr(key_usage.value, 'decipher_only') else False
+                    "encipher_only": key_usage.value.encipher_only if key_usage.value.key_agreement else None,
+                    "decipher_only": key_usage.value.decipher_only if key_usage.value.key_agreement else None
                 }
             })
         except x509.ExtensionNotFound:

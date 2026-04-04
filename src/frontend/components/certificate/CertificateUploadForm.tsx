@@ -112,9 +112,7 @@ export default function CertificateUploadForm({
       )}
 
       {isLoading && (
-        <p className="text-sm text-slate-500 text-center">
-          Đang xử lý...
-        </p>
+        <p className="text-sm text-slate-500 text-center">Đang xử lý...</p>
       )}
     </div>
   );
