@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from '@supabase/ssr'
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
     const token = request.cookies.get("token")?.value;
     // Lấy cookie từ request
     const userRole = request.cookies.get("userRole")?.value;
