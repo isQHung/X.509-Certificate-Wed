@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 
 export default function UserCSRPage() {
+  // State quản lý thông tin Subject
   const [commonName, setCommonName] = useState("");
   const [organization, setOrganization] = useState("");
   const [organizationalUnit, setOrganizationalUnit] = useState("");
@@ -10,12 +11,17 @@ export default function UserCSRPage() {
   const [stateRegion, setStateRegion] = useState("");
   const [locality, setLocality] = useState("");
   const [sanValues, setSanValues] = useState("");
+
+  // State quản lý trạng thái xử lý và kết quả
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [csrPem, setCsrPem] = useState<string | null>(null);
   const [requestId, setRequestId] = useState<string | null>(null);
 
+  /**
+   * Hàm hỗ trợ tải file Private Key về máy
+   */
   const downloadKeyFile = (keyPem: string, filename: string) => {
     const blob = new Blob([keyPem], { type: "application/x-pem-file" });
     const url = URL.createObjectURL(blob);
@@ -35,6 +41,7 @@ export default function UserCSRPage() {
     setCsrPem(null);
     setRequestId(null);
 
+    // Kiểm tra Common Name bắt buộc
     if (!commonName.trim()) {
       setError("Common Name (CN) là bắt buộc.");
       return;
@@ -43,6 +50,7 @@ export default function UserCSRPage() {
     setIsSubmitting(true);
 
     try {
+      // Chuẩn bị dữ liệu Subject
       const sanitizedSubject = {
         CN: commonName.trim(),
         O: organization.trim() || undefined,
@@ -52,160 +60,233 @@ export default function UserCSRPage() {
         L: locality.trim() || undefined,
       };
 
+      // Xử lý danh sách SAN
       const sanList = sanValues
         .split(",")
         .map((item) => item.trim())
         .filter((item) => item.length > 0);
 
-      const response = await fetch("/api/v1/cert_request/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      /**
+       * Gửi yêu cầu đến Backend
+       * Lưu ý: API này sẽ trả về private_key_pem để người dùng tải về
+       */
+      const response = await fetch(
+        "http://localhost:5000/api/v1/cert_request/generate",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            subject: sanitizedSubject,
+            san: sanList,
+          }),
         },
-        body: JSON.stringify({
-          subject: sanitizedSubject,
-          san: sanList,
-        }),
-      });
+      );
 
       const data = await response.json();
+
       if (!response.ok) {
-        throw new Error(data.error || "Không thể tạo CSR. Vui lòng thử lại.");
+        // Chuyển đối tượng lỗi JSON thành chuỗi để hiển thị nếu cần
+        const errorMsg =
+          typeof data.error === "object"
+            ? JSON.stringify(data.error)
+            : data.error;
+        throw new Error(errorMsg || "Không thể tạo CSR. Vui lòng thử lại.");
       }
 
+      // Xử lý thành công
       setSuccessMessage("CSR đã được tạo và gửi lên hệ thống thành công.");
       setCsrPem(data.csr_pem);
       setRequestId(data.request_id);
-      downloadKeyFile(data.private_key_pem, `${commonName.trim() || "csr"}.key`);
+
+      // Tự động tải Private Key về máy ngay lập tức
+      if (data.private_key_pem) {
+        downloadKeyFile(
+          data.private_key_pem,
+          `${commonName.trim() || "private"}.key`,
+        );
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Đã xảy ra lỗi không xác định.");
+      setError(
+        err instanceof Error ? err.message : "Đã xảy ra lỗi không xác định.",
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-bold text-slate-900">Gửi yêu cầu CSR</h1>
-        <p className="text-sm text-slate-500">
-          Tạo cặp khóa và CSR tương tác, sau đó gửi yêu cầu CSR lên hệ thống.
+    <div className="max-w-4xl mx-auto p-6 space-y-8">
+      <header className="border-b pb-4">
+        <h1 className="text-3xl font-extrabold text-slate-900">
+          Gửi yêu cầu CSR
+        </h1>
+        <p className="text-slate-500 mt-2">
+          Tạo cặp khóa và CSR, sau đó hệ thống sẽ tự động lưu trữ yêu cầu chờ
+          duyệt.
         </p>
       </header>
 
-      <div className="max-w-3xl bg-white border border-slate-200 rounded-2xl shadow-sm p-8">
-        <form className="space-y-6" onSubmit={handleSubmit}>
+      <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
+        <form className="p-8 space-y-6" onSubmit={handleSubmit}>
+          {/* Hàng 1: CN & O */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase">Common Name (CN)</label>
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Common Name (CN)*
+              </label>
               <input
                 value={commonName}
-                onChange={(event) => setCommonName(event.target.value)}
+                onChange={(e) => setCommonName(e.target.value)}
                 type="text"
-                placeholder="Ví dụ: example.com"
-                className="w-full p-2.5 border rounded-xl text-sm"
+                placeholder="ví dụ: example.com"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition text-sm"
+                required
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase">Organization (O)</label>
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Organization (O)
+              </label>
               <input
                 value={organization}
-                onChange={(event) => setOrganization(event.target.value)}
+                onChange={(e) => setOrganization(e.target.value)}
                 type="text"
-                placeholder="Ví dụ: FPT Corporation"
-                className="w-full p-2.5 border rounded-xl text-sm"
+                placeholder="Tên công ty"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition text-sm"
               />
             </div>
           </div>
 
+          {/* Hàng 2: OU & C */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase">Organizational Unit (OU)</label>
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Organizational Unit (OU)
+              </label>
               <input
                 value={organizationalUnit}
-                onChange={(event) => setOrganizationalUnit(event.target.value)}
+                onChange={(e) => setOrganizationalUnit(e.target.value)}
                 type="text"
-                placeholder="Ví dụ: IT Department"
-                className="w-full p-2.5 border rounded-xl text-sm"
+                placeholder="Phòng ban"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition text-sm"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase">Country (C)</label>
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Country (C)
+              </label>
               <input
                 value={country}
-                onChange={(event) => setCountry(event.target.value)}
+                onChange={(e) => setCountry(e.target.value)}
                 type="text"
                 placeholder="Ví dụ: VN"
-                className="w-full p-2.5 border rounded-xl text-sm"
+                maxLength={2}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition text-sm"
               />
             </div>
           </div>
 
+          {/* Hàng 3: ST & L */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase">State / Province (ST)</label>
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                State / Province (ST)
+              </label>
               <input
                 value={stateRegion}
-                onChange={(event) => setStateRegion(event.target.value)}
+                onChange={(e) => setStateRegion(e.target.value)}
                 type="text"
                 placeholder="Ví dụ: Hanoi"
-                className="w-full p-2.5 border rounded-xl text-sm"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition text-sm"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase">Locality (L)</label>
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Locality (L)
+              </label>
               <input
                 value={locality}
-                onChange={(event) => setLocality(event.target.value)}
+                onChange={(e) => setLocality(e.target.value)}
                 type="text"
                 placeholder="Ví dụ: Hoan Kiem"
-                className="w-full p-2.5 border rounded-xl text-sm"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition text-sm"
               />
             </div>
           </div>
 
+          {/* SAN */}
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase">Subject Alternative Names (SAN)</label>
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+              Subject Alternative Names (SAN)
+            </label>
             <input
               value={sanValues}
-              onChange={(event) => setSanValues(event.target.value)}
+              onChange={(e) => setSanValues(e.target.value)}
               type="text"
-              placeholder="Danh sách DNS, phân tách bằng dấu phẩy"
-              className="w-full p-2.5 border rounded-xl text-sm"
+              placeholder="ví dụ: example.com, www.example.com"
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition text-sm"
             />
-            <p className="text-xs text-slate-500">Ví dụ: example.com, www.example.com</p>
           </div>
 
+          {/* Hiển thị lỗi */}
           {error && (
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-              {error}
+            <div className="p-4 bg-red-50 border border-red-100 rounded-2xl">
+              <p className="text-sm text-red-600 font-mono break-all leading-relaxed">
+                <span className="font-bold uppercase mr-2">Error:</span>
+                {error}
+              </p>
             </div>
           )}
 
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition shadow-lg shadow-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? "Đang tạo CSR..." : "Tạo và gửi yêu cầu CSR"}
+            {isSubmitting ? "Đang xử lý..." : "Tạo và gửi yêu cầu CSR"}
           </button>
         </form>
 
-        {successMessage && (
-          <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-sm text-emerald-800">
-            <p>{successMessage}</p>
-            {requestId && <p className="mt-2">Mã yêu cầu: <strong>{requestId}</strong></p>}
-          </div>
-        )}
+        {/* Hiển thị kết quả thành công */}
+        {(successMessage || csrPem) && (
+          <div className="p-8 border-t border-slate-100 bg-slate-50/50 space-y-6">
+            {successMessage && (
+              <div className="flex items-center gap-3 text-emerald-600 bg-emerald-50 p-4 rounded-2xl border border-emerald-100">
+                <span className="font-bold text-lg">✓</span>
+                <p className="font-medium text-sm">{successMessage}</p>
+              </div>
+            )}
 
-        {csrPem && (
-          <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-6">
-            <h2 className="text-sm font-semibold text-slate-900 mb-3">CSR PEM</h2>
-            <textarea
-              readOnly
-              value={csrPem}
-              className="w-full min-h-[220px] rounded-2xl border border-slate-200 bg-white p-4 text-xs font-mono text-slate-700"
-            />
+            {requestId && (
+              <div className="flex justify-between items-center text-sm px-4">
+                <span className="text-slate-500 font-medium italic">
+                  Request ID:
+                </span>
+                <code className="bg-white px-3 py-1 rounded-lg border text-blue-600 font-bold">
+                  {requestId}
+                </code>
+              </div>
+            )}
+
+            {csrPem && (
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  CSR PEM Content
+                </label>
+                <textarea
+                  readOnly
+                  value={csrPem}
+                  className="w-full h-48 p-5 bg-white border border-slate-200 rounded-2xl text-[10px] font-mono text-slate-600 outline-none shadow-inner"
+                />
+              </div>
+            )}
+
+            <p className="text-[10px] text-center text-slate-400 italic">
+              🔒 Lưu ý: Private Key đã được tự động tải về máy. Hệ thống không
+              lưu giữ khóa này.
+            </p>
           </div>
         )}
       </div>
