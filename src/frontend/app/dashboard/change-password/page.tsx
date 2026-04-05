@@ -1,7 +1,7 @@
 "use client";
 import { createClient } from "@/lib/supabase";
-import { useState } from "react";
 import Cookies from "js-cookie";
+import { useState } from "react";
 
 export default function ChangePasswordPage() {
     const [currentPassword, setCurrentPassword] = useState("");
@@ -95,7 +95,7 @@ export default function ChangePasswordPage() {
                         />
                     </div>
 
-                    <hr className="border-slate-50" />
+                    {/* <hr className="border-slate-50" /> */}
 
                     <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-1.5">

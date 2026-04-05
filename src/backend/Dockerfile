@@ -8,6 +8,10 @@ RUN pip install uv
 # Copy dependency trước để cache
 COPY pyproject.toml uv.lock* ./
 
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install dependencies
 RUN uv sync --no-dev
 

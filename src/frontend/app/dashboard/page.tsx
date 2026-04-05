@@ -125,7 +125,7 @@ export default function DashboardPage() {
 
       {/* Utilities */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Link href="/dashboard/user/crl-lookup" className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-4 hover:bg-slate-100 transition group">
+          <Link href="/dashboard/user/crl" className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-4 hover:bg-slate-100 transition group">
             <span className="text-2xl">🔍</span>
             <div>
                 <p className="text-sm font-bold text-slate-700">Tra cứu CRL</p>
