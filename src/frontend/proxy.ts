@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from '@supabase/ssr'
 import { jwtVerify } from "jose";
 
+
 const SECRET_KEY = new TextEncoder().encode(
   process.env.JWT_SECRET_KEY || "default_secret_key_for_local_dev",
 );
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
     const token = request.cookies.get("session_token")?.value;
+
     // Lấy cookie từ request
     // const userRole = request.cookies.get("userRole")?.value;
     const { pathname } = request.nextUrl;
