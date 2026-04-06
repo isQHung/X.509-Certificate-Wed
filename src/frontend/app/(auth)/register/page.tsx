@@ -1,6 +1,5 @@
 "use client";
 import { createClient } from "@/lib/supabase";
-import Cookies from "js-cookie";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -16,72 +15,25 @@ export default function RegisterPage() {
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
-        const supabase = createClient();
+        // const supabase = createClient();
 
         try {
-            const { data: authData, error: authError } =
-                await supabase.auth.signUp({
-                    email: formData.email,
-                    password: formData.password,
-                    options: {
-                        data: {
-                            full_name: formData.fullName,
-                        },
-                    },
-                });
+            const res = await fetch("/api/auth/register", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(formData),
+            });
 
-            if (authError) throw authError;
-            const user = authData?.user;
-
-            if (user) {
-                const { error: userError } = await supabase
-                    .from("users")
-                    .insert([
-                        {
-                            id: user.id,
-                            email: user.email,
-                            password_hash: "",
-                            status: "active",
-                            created_at: new Date().toISOString(),
-                        },
-                    ]);
-
-                if (userError) {
-                    console.error("Lỗi insert bảng users:", userError);
-                    throw new Error(
-                        "Không thể tạo thông tin người dùng trong cơ sở dữ liệu.",
-                    );
-                }
-
-                const { data: role, error: roleFetchError } = await supabase
-                    .from("roles")
-                    .select("id")
-                    .ilike("name", "customer")
-                    .single();
-
-                if (roleFetchError || !role) {
-                    console.error("Lỗi lấy Role:", roleFetchError);
-                    throw new Error(
-                        "Không tìm thấy vai trò người dùng mặc định.",
-                    );
-                }
-
-                const { error: userRoleError } = await supabase
-                    .from("user_roles")
-                    .insert([{ user_id: user.id, role_id: role.id }]);
-
-                if (userRoleError) {
-                    console.error("Lỗi insert bảng user_roles:", userRoleError);
-                    throw new Error("Không thể cấp quyền cho người dùng.");
-                }
-
-                Cookies.set("userRole", "CUSTOMER", { expires: 1 });
-                Cookies.set("userName", formData.fullName, { expires: 1 });
-                localStorage.setItem("userRole", "CUSTOMER");
-                localStorage.setItem("userName", formData.fullName);
-
-                window.location.href = "/dashboard";
+            if (!res.ok) {
+                throw new Error("Đăng ký thất bại");
             }
+
+            const data = await res.json();
+            console.log(data);
+            window.location.href = "/login";
+
         } catch (error: any) {
             const errorMsg = error.message || String(error);
             if (errorMsg.toLowerCase().includes("already used")) {

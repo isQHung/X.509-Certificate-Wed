@@ -75,14 +75,14 @@ export async function POST(request: Request) {
       status: "ACTIVE",
     };
 
-    //  Tạo JWT riêng của bạn
+    //  Tạo JWT riêng
     const token = await new SignJWT(userPayload)
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
       .setExpirationTime("2h")
       .sign(SECRET_KEY);
 
-    //  Set cookie bằng NextResponse (chuẩn)
+    //  Set cookie bằng NextResponse
     const response = NextResponse.json(
       {
         message: "Đăng nhập thành công",
