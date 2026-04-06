@@ -119,12 +119,10 @@ def generate_csr(data: Dict[str, Any]) -> Dict[str, Any]:
         "san": json.dumps(san_values),
     }
 
-    # Giữ nguyên hàm tạo CSR để lưu vào bảng certificate_requests
     # request_id = create_csr(request_payload)
 
     return {
-        "key_pair_id": key_pair_id,
-        "request_id": "local_null",
+        "request_id": "locally-generated",
         "csr_pem": csr_pem,
         "private_key_pem": private_key_pem,
         "public_key_pem": public_key_pem # Trả thêm public key về cho frontend nếu cần
