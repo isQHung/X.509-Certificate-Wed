@@ -3,9 +3,9 @@ from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from api.routes import routes
-
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+CORS(app,supports_credentials=True,origins=["http://localhost:3000"]) 
+
 app.register_blueprint(routes)
 
 # Health check endpoint

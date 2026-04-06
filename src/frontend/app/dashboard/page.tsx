@@ -12,7 +12,7 @@ export default function DashboardPage() {
   if (role === null) return null;
 
   // --- GIAO DIỆN ADMIN ---
-  if (role === "ADMIN") {
+  if (role === "admin") {
     return (
       <div className="space-y-8">
         <header>

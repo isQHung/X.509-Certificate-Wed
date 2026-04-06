@@ -1,69 +1,45 @@
 "use client";
 import { createClient } from "@/lib/supabase";
-import Cookies from "js-cookie";
+// import Cookies from "js-cookie";
 import Link from "next/link";
 import { useState } from "react";
 
 export default function LoginPage() {
-    const [username, setUsername] = useState("");
+    const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const supabase = createClient();
 
     const handleLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
-        try {
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email: username,
-                password,
-            });
+      e.preventDefault();
 
-            if (error || !data?.user) {
-                throw error || new Error("Đăng nhập thất bại");
-            }
+      try {
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            email,
+            password,
+          }),
+        });
 
-            const accessToken = (data.session as any)?.access_token;
+        const data = await res.json();
 
-            let role = "CUSTOMER";
-            try {
-                const { data: userRoleData, error: roleError } = await supabase
-                    .from("user_roles")
-                    .select(
-                        `roles (name)`,
-                    )
-                    .eq("user_id", data.user.id) 
-                    .single();
-
-                if (roleError) {
-                    console.error(
-                        "Lỗi lấy quyền người dùng:",
-                        roleError.message,
-                    );
-                } else if (userRoleData?.roles) {
-                    const rawRole = (userRoleData.roles as any).name;
-                    role =
-                        rawRole?.toUpperCase() === "ADMIN"
-                            ? "ADMIN"
-                            : "CUSTOMER";
-                }
-            } catch (err) {
-                console.error("Crashed khi xử lý role:", err);
-            }
-
-            if (accessToken) {
-                Cookies.set("token", accessToken, { expires: 1, secure: true });
-            }
-            Cookies.set("userRole", role, { expires: 1 });
-            localStorage.setItem("userRole", role || "");
-
-            window.location.href = "/dashboard";
-        } catch (error: unknown) {
-            const message =
-                error instanceof Error ? error.message : String(error);
-            alert("Lỗi đăng nhập: " + message);
+        if (!res.ok) {
+          throw new Error(data.message || "Đăng nhập thất bại");
         }
+        localStorage.setItem("userRole", data.user.role.toUpperCase());
+        // Đăng nhập thành công, Next.js API đã set cookie httpOnly.
+        // Chuyển hướng người dùng vào Dashboard
+        window.location.href = "/dashboard";
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        alert("Lỗi đăng nhập: " + message);
+      }
     };
 
-    // Hàm đăng nhập Google
     const handleGoogleLogin = async () => {
         try {
             await supabase.auth.signInWithOAuth({ provider: "google" });
@@ -100,14 +76,14 @@ export default function LoginPage() {
                     <form onSubmit={handleLogin} className="space-y-5">
                         <div>
                             <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                                Tên đăng nhập
+                                Email
                             </label>
                             <input
-                                type="text"
+                                type="email"
                                 className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-400"
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                placeholder="Tên đăng nhập"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="Email"
                             />
                         </div>
                         <div>
