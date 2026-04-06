@@ -1,15 +1,27 @@
 "use client";
+import { useState, useEffect, useCallback } from "react";
+// 1. Import hàm createClient thay vì biến supabase
+import { createClient } from "../../../../lib/supabase";
 
+<<<<<<< HEAD
 import { useState, useEffect, useCallback, useMemo } from "react";
 // Đảm bảo import đúng hàm createClient từ file supabase.ts của bạn
 import { createClient } from "@/lib/supabase";
+=======
+// 2. Khởi tạo client bên ngoài hoặc bên trong component
+const supabase = createClient();
+>>>>>>> 08ec126 (feat(JIRA-23): update key management logic and supabase client)
 
 interface KeyPair {
   id: string;
   owner_id: string;
   key_type: string;
   key_size: number;
+<<<<<<< HEAD
   fingerprint: string; // Cột lưu Public Key PEM hoặc mã định danh khóa
+=======
+  fingerprint: string; // Đây là nơi lưu Public Key PEM theo logic mới của bạn
+>>>>>>> 08ec126 (feat(JIRA-23): update key management logic and supabase client)
   created_at: string;
 }
 
@@ -22,6 +34,7 @@ export default function UserKeysPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [savedKeys, setSavedKeys] = useState<KeyPair[]>([]);
   const [error, setError] = useState<string | null>(null);
+<<<<<<< HEAD
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -29,15 +42,31 @@ export default function UserKeysPage() {
   const fetchKeys = useCallback(async () => {
     try {
       const { data, error: dbError } = await supabase
+=======
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // 1. Lấy danh sách khóa từ bảng key_pairs trên Supabase
+  const fetchKeys = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+>>>>>>> 08ec126 (feat(JIRA-23): update key management logic and supabase client)
         .from("key_pairs")
         .select("*")
         .order("created_at", { ascending: false });
 
+<<<<<<< HEAD
       if (dbError) throw dbError;
       if (data) setSavedKeys(data);
     } catch (e: any) {
       console.error("Lỗi khi tải danh sách khóa:", e);
       setError("Không thể tải danh sách khóa từ hệ thống.");
+=======
+      if (error) throw error;
+      if (data) setSavedKeys(data);
+    } catch (e) {
+      console.error("Lỗi khi fetch:", e);
+      setError("Không thể tải danh sách khóa.");
+>>>>>>> 08ec126 (feat(JIRA-23): update key management logic and supabase client)
     }
   }, [supabase]);
 
@@ -45,11 +74,9 @@ export default function UserKeysPage() {
     fetchKeys();
   }, [fetchKeys]);
 
-  const handleCopy = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
+  useEffect(() => {
+    fetchKeys();
+  }, [fetchKeys]);
 
   const downloadPrivateKey = (pem: string, fileName: string) => {
     const blob = new Blob([pem], { type: "application/x-pem-file" });
@@ -64,15 +91,12 @@ export default function UserKeysPage() {
   };
 
   const handleGenerateKey = async () => {
-    if (!alias.trim()) {
-      setError("Vui lòng nhập tên gợi nhớ (Alias)");
-      return;
-    }
+    if (!alias.trim()) return setError("Vui lòng nhập tên gợi nhớ.");
     setIsGenerating(true);
     setError(null);
-    setSuccessMsg(null);
 
     try {
+      // Gọi API đến Backend (Python/FastAPI) để tạo cặp khóa
       const response = await fetch(
         "http://localhost:5000/api/v1/cert_request/generate",
         {
@@ -86,9 +110,9 @@ export default function UserKeysPage() {
       );
 
       const data = await response.json();
-      if (!response.ok)
-        throw new Error(data.error || "Lỗi khi phát sinh cặp khóa.");
+      if (!response.ok) throw new Error(data.error);
 
+      // Tải Private Key về máy (vì Backend không lưu Private Key vào DB)
       if (data.private_key_pem) {
         // Tải Private Key về vì Database không lưu trữ khóa bí mật để đảm bảo an toàn
         downloadPrivateKey(data.private_key_pem, alias.replace(/\s+/g, "_"));
@@ -101,6 +125,11 @@ export default function UserKeysPage() {
       }
     } catch (err: any) {
       setError(err.message || "Lỗi kết nối tới hệ thống Backend.");
+        setAlias("");
+        await fetchKeys(); // Refresh lại danh sách từ table
+      }
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setIsGenerating(false);
     }
@@ -253,6 +282,83 @@ export default function UserKeysPage() {
                 ))
               )}
             </div>
+    <div className="max-w-6xl mx-auto p-8 space-y-10">
+      <h1 className="text-3xl font-bold">Security Keys</h1>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Cột trái: Form tạo */}
+        <div className="lg:col-span-4 space-y-4">
+          <div className="p-6 bg-white border rounded-xl shadow-sm space-y-4">
+            <h2 className="font-semibold text-lg">Generate New RSA Pair</h2>
+            <input
+              className="w-full p-2 border rounded bg-gray-50"
+              placeholder="Key Alias (e.g. My-Web-Server)"
+              value={alias}
+              onChange={(e) => setAlias(e.target.value)}
+            />
+            <select
+              className="w-full p-2 border rounded bg-gray-50"
+              value={algorithm}
+              onChange={(e) => setAlgorithm(e.target.value)}
+            >
+              <option>RSA - 2048 bit</option>
+              <option>RSA - 4096 bit</option>
+            </select>
+            <button
+              onClick={handleGenerateKey}
+              disabled={isGenerating}
+              className="w-full py-2 bg-green-600 text-white rounded font-bold disabled:opacity-50"
+            >
+              {isGenerating ? "Processing..." : "Generate & Save to DB"}
+            </button>
+          </div>
+          {error && <p className="text-red-500 text-sm italic">{error}</p>}
+        </div>
+
+        {/* Cột phải: Danh sách từ Table key_pairs */}
+        <div className="lg:col-span-8 space-y-4">
+          <h3 className="font-semibold text-slate-700">
+            Stored Key Pairs (Public Info)
+          </h3>
+          <div className="space-y-4 overflow-y-auto max-h-[600px] pr-2">
+            {savedKeys.map((key) => (
+              <div
+                key={key.id}
+                className="p-5 bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow"
+              >
+                <div className="flex justify-between items-center mb-3">
+                  <div>
+                    <p className="font-bold text-indigo-600">
+                      Key ID: {key.id.slice(0, 8)}...
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {key.key_type} • {key.key_size} bit •{" "}
+                      {new Date(key.created_at).toLocaleString()}
+                    </p>
+                  </div>
+                  <span className="px-2 py-1 bg-blue-50 text-blue-600 text-[10px] rounded border">
+                    Database Sync
+                  </span>
+                </div>
+
+                {/* Hiển thị Public Key từ cột fingerprint */}
+                <div className="relative group">
+                  <pre className="text-[9px] bg-slate-50 p-3 rounded border overflow-x-auto text-gray-600">
+                    {key.fingerprint}
+                  </pre>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(key.fingerprint);
+                      setCopiedId(key.id);
+                      setTimeout(() => setCopiedId(null), 2000);
+                    }}
+                    className="absolute top-2 right-2 p-1 bg-white border rounded text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    {copiedId === key.id ? "✅ Copied" : "📋 Copy Public Key"}
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
