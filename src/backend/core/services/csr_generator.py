@@ -6,6 +6,7 @@ Generates a new RSA private key and Certificate Signing Request (CSR), then stor
 import json
 from uuid import UUID
 from typing import Any, Dict, List
+from db.supabase_client import get_supabase_client
 
 from cryptography import x509
 from cryptography.x509.oid import NameOID
@@ -119,10 +120,12 @@ def generate_csr(data: Dict[str, Any]) -> Dict[str, Any]:
         "san": json.dumps(san_values),
     }
 
+    # Giữ nguyên hàm tạo CSR để lưu vào bảng certificate_requests
     # request_id = create_csr(request_payload)
 
     return {
-        "request_id": "locally-generated",
+        "key_pair_id": key_pair_id,
+        "request_id": "local_null",
         "csr_pem": csr_pem,
         "private_key_pem": private_key_pem,
         "public_key_pem": public_key_pem # Trả thêm public key về cho frontend nếu cần
