@@ -29,8 +29,8 @@ SUBJECT_OIDS = {
 
 
 def _build_subject(subject_data: Dict[str, str]) -> x509.Name:
-    if not subject_data or not subject_data.get("CN"):
-        raise ValueError("Common Name (CN) is required")
+    # if not subject_data or not subject_data.get("CN"):
+    #     raise ValueError("Common Name (CN) is required")
 
     attributes = []
     for field, oid in SUBJECT_OIDS.items():
@@ -56,10 +56,11 @@ def _normalize_subject(subject_data: Dict[str, Any]) -> Dict[str, str]:
     return {key: str(value).strip() for key, value in subject_data.items() if value}
 
 
-def generate_csr(data: Dict[str, Any], user_id: str) -> Dict[str, Any]: # Nhận user_id từ tham số
+def generate_csr(data: Dict[str, Any], user_id: str, alias: str) -> Dict[str, Any]: # Nhận user_id từ tham số
     if not user_id:
         raise PermissionError("User ID là bắt buộc")
-
+    if not alias:
+        raise ValueError("Alias không được để trống")
     print(f"DEBUG: Service received UserId: {user_id}")
     subject_data = _normalize_subject(data.get("subject", {}))
     san_values = data.get("san", []) or []
@@ -103,6 +104,7 @@ def generate_csr(data: Dict[str, Any], user_id: str) -> Dict[str, Any]: # Nhận
         
         key_pair_payload = {
             "owner_id": user_id,
+            "alias": alias,
             "key_type": "RSA",
             "key_size": 2048,
             "fingerprint": public_key_pem 

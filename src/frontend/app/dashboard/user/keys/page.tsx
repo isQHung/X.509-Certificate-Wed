@@ -97,7 +97,8 @@ export default function UserKeysPage() {
           },
           body: JSON.stringify({
             userId: storedUserId,
-            subject: { CN: alias.trim() },
+            alias: alias.trim(),
+            // subject: { CN: alias.trim() },
             key_size: algorithm.includes("4096") ? 4096 : 2048,
           }),
         },

@@ -18,10 +18,11 @@ def generate_cert_request():
     try:
         data = request.get_json()
         user_id = data.get("userId")
+        alias = data.get("alias", "").strip()
         if not user_id:
             print("DEBUG: Không tìm thấy UserID trong cả Body lẫn Cookie")
             return jsonify({"error": "Unauthorized: Missing User ID"}), 401
-        result = generate_csr(data, user_id)
+        result = generate_csr(data, user_id, alias)
         
         return jsonify(result), 200
     except Exception as e:
