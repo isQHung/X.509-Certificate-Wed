@@ -14,9 +14,10 @@ from cryptography.hazmat.primitives import hashes, serialization
 from db.supabase_client import get_supabase_client
 from core.crypto.RSA import RSACAService
 from core.services.cert_request import create_csr
-from api.jwt_utils import get_user_id_from_payload
+# from api.jwt_utils import get_user_id_from_payload
 DEFAULT_USER_ID = UUID('00000000-0000-0000-0000-000000000000')
 supabase = get_supabase_client()
+# supabase = get_supabase_client()
 SUBJECT_OIDS = {
     "CN": NameOID.COMMON_NAME,
     "O": NameOID.ORGANIZATION_NAME,
@@ -55,8 +56,11 @@ def _normalize_subject(subject_data: Dict[str, Any]) -> Dict[str, str]:
     return {key: str(value).strip() for key, value in subject_data.items() if value}
 
 
-def generate_csr(data: Dict[str, Any]) -> Dict[str, Any]:
-    # 1. Chuẩn hóa dữ liệu đầu vào
+def generate_csr(data: Dict[str, Any], user_id: str) -> Dict[str, Any]: # Nhận user_id từ tham số
+    if not user_id:
+        raise PermissionError("User ID là bắt buộc")
+
+    print(f"DEBUG: Service received UserId: {user_id}")
     subject_data = _normalize_subject(data.get("subject", {}))
     san_values = data.get("san", []) or []
     if isinstance(san_values, str):
@@ -95,7 +99,7 @@ def generate_csr(data: Dict[str, Any]) -> Dict[str, Any]:
     key_pair_id = None
     try:
         # 4. Lưu thông tin vào bảng key_pairs
-        user_id = get_user_id_from_payload() or str(DEFAULT_USER_ID)
+        # user_id = get_user_id_from_payload() or str(DEFAULT_USER_ID)
         
         key_pair_payload = {
             "owner_id": user_id,
@@ -114,7 +118,7 @@ def generate_csr(data: Dict[str, Any]) -> Dict[str, Any]:
 
     # 5. Lưu yêu cầu ký chứng chỉ vào bảng certificate_requests
     request_payload = {
-        "user_id": get_user_id_from_payload() or str(DEFAULT_USER_ID),
+        "user_id": user_id,
         "csr_pem": csr_pem,
         "subject": json.dumps(subject_data),
         "san": json.dumps(san_values),
