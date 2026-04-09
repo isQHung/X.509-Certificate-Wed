@@ -28,9 +28,11 @@ export default function UserKeysPage() {
   // 1. LẤY DỮ LIỆU TỪ BẢNG KEY_PAIRS
   const fetchKeys = useCallback(async () => {
     try {
+      const storedUserId = localStorage.getItem("userId");
       const { data, error: dbError } = await supabase
         .from("key_pairs")
         .select("*")
+        .eq("owner_id", storedUserId)
         .order("created_at", { ascending: false });
 
       if (dbError) throw dbError;
@@ -42,7 +44,16 @@ export default function UserKeysPage() {
   }, [supabase]);
 
   useEffect(() => {
-    fetchKeys();
+    const storedUserId = localStorage.getItem("userId");
+
+    if (storedUserId) {
+      console.log(
+        "Dòng thời gian: Người dùng đã xác thực, bắt đầu tải khóa...",
+      );
+      fetchKeys();
+    } else {
+      console.warn("Cảnh báo: Không tìm thấy UserId, vui lòng đăng nhập lại.");
+    }
   }, [fetchKeys]);
 
   const handleCopy = (text: string, id: string) => {
@@ -75,24 +86,17 @@ export default function UserKeysPage() {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      const token = session?.access_token;
-
-      if (token) {
-        // 2. GHI TOKEN VÀO COOKIE ĐỂ "HÀM GIỮ NGUYÊN" CÓ THỂ ĐỌC ĐƯỢC
-        // expires: 1 ngày (hoặc tùy chỉnh)
-        document.cookie = `session_token=${token}; path=/; max-age=86400; SameSite=Lax`;
-      }
-
+      const storedUserId = localStorage.getItem("userId");
       const response = await fetch(
         "http://localhost:5000/api/v1/cert_request/generate",
         {
           method: "POST",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
-            // Vẫn nên gửi kèm Header Authorization cho chắc chắn
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
+            userId: storedUserId,
             subject: { CN: alias.trim() },
             key_size: algorithm.includes("4096") ? 4096 : 2048,
           }),

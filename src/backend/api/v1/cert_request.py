@@ -16,14 +16,11 @@ def create_cert_request():
 @customer_bp.route("/cert_request/generate", methods=["POST"])
 def generate_cert_request():
     try:
-        user_id = get_user_id_from_payload()
-        
-        if not user_id:
-            print("DEBUG: Không tìm thấy session_token trong Cookie")
-            return jsonify({"error": "Unauthorized"}), 401
-            
         data = request.get_json()
-        
+        user_id = data.get("userId")
+        if not user_id:
+            print("DEBUG: Không tìm thấy UserID trong cả Body lẫn Cookie")
+            return jsonify({"error": "Unauthorized: Missing User ID"}), 401
         result = generate_csr(data, user_id)
         
         return jsonify(result), 200

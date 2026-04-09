@@ -74,6 +74,7 @@ export default function UserCSRPage() {
         "http://localhost:5000/api/v1/cert_request/generate",
         {
           method: "POST",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
