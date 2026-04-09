@@ -2,9 +2,7 @@ import { NextResponse } from "next/server";
 import { SignJWT } from "jose";
 import { createServerClient } from "@supabase/ssr";
 
-const SECRET_KEY = new TextEncoder().encode(
-  process.env.JWT_SECRET_KEY,
-);
+const SECRET_KEY = new TextEncoder().encode(process.env.JWT_SECRET_KEY);
 
 export async function POST(request: Request) {
   try {
@@ -86,10 +84,7 @@ export async function POST(request: Request) {
     const response = NextResponse.json(
       {
         message: "Đăng nhập thành công",
-        user: {
-          email: user.email,
-          role: userPayload.role,
-        },
+        userPayload: userPayload,
       },
       { status: 200 },
     );

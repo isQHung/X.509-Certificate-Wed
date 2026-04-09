@@ -41,6 +41,7 @@ export default function CertificateInspectorPage() {
 
       const response = await fetch(certificateInspectUrl, {
         method: "POST",
+        credentials: "include",
         body: formData,
       });
 

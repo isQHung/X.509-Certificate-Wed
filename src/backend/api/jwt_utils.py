@@ -23,3 +23,4 @@ def get_user_id_from_payload():
     token = request.cookies.get("session_token")
     payload = get_payload_from_token(token)
     return payload.get("userId") if payload else None
+
