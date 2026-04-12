@@ -1,9 +1,54 @@
 from flask import Flask, request, jsonify
 import os
 from datetime import datetime
+from pathlib import Path
+
+# Load environment variables from .env file if present.
+# Prefer python-dotenv when available, otherwise fall back to a simple parser.
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(dotenv_path=Path(__file__).parent / ".env")
+except Exception:
+    env_path = Path(__file__).parent / ".env"
+    if env_path.exists():
+        for line in env_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            k = k.strip()
+            v = v.strip().strip('"').strip("'")
+            if k and k not in os.environ:
+                os.environ[k] = v
+
 from api.routes import routes
 
 app = Flask(__name__)
+# Enable CORS for API endpoints. Prefer flask-cors when installed,
+# otherwise add permissive CORS headers as a fallback.
+try:
+    from flask_cors import CORS
+
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
+except Exception:
+    @app.after_request
+    def _add_cors_headers(response):
+        response.headers["Access-Control-Allow-Origin"] = os.getenv("CORS_ALLOW_ORIGIN", "*")
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type,Authorization"
+        response.headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,DELETE,OPTIONS"
+        return response
+
+    @app.before_request
+    def _handle_options():
+        from flask import make_response
+
+        if request.method == "OPTIONS":
+            resp = make_response("")
+            resp.headers["Access-Control-Allow-Origin"] = os.getenv("CORS_ALLOW_ORIGIN", "*")
+            resp.headers["Access-Control-Allow-Headers"] = "Content-Type,Authorization"
+            resp.headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,DELETE,OPTIONS"
+            return resp
 app.register_blueprint(routes)
 
 

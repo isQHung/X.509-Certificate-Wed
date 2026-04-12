@@ -1,19 +1,36 @@
 "use client";
+// import { listCertificates } from "@/lib/api/admin";
 import { downloadCertificate, requestRevocation } from "@/lib/api/client";
 import { useApi } from "@/lib/useApi";
 import { saveAs } from "file-saver";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function UserCertificatesPage() {
-    const [myCerts] = useState([
-        {
-            id: 1,
-            cn: "localhost.dev",
-            serial: "77:AF:22:...",
-            expiry: "2027-04-01",
-            status: "Active",
-        },
-    ]);
+    const [myCerts, setMyCerts] = useState<any[]>([]);
+
+    // useEffect(() => {
+    //     let mounted = true;
+    //     (async () => {
+    //         try {
+    //             const data = await listCertificates();
+    //             if (!mounted) return;
+    //             // normalize to expected shape
+    //             const mapped = (data || []).map((c: any) => ({
+    //                 id: c.id,
+    //                 cn: c.subject || c.issuer || "-",
+    //                 serial: c.serial || c.serial_number || c.serial_number,
+    //                 expiry: c.validUntil || c.valid_to || c.valid_to,
+    //                 status: c.status,
+    //             }));
+    //             setMyCerts(mapped);
+    //         } catch (e) {
+    //             setMyCerts([]);
+    //         }
+    //     })();
+    //     return () => {
+    //         mounted = false;
+    //     };
+    // }, []);
 
     const { call } = useApi();
 
