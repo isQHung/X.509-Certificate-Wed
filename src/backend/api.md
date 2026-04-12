@@ -176,6 +176,41 @@ POST /api/v1/user/revoke/ABC123456789/cancel
 
 ---
 
+### 1.5 Lấy danh sách certificate của user hiện tại
+
+- **Endpoint:** `/certificates/my`
+- **Method:** `GET`
+
+#### Query Parameters
+
+- `status` (Optional): `active` | `revoked` | `expired`
+
+#### Response
+
+**Success (200):**
+
+```json
+[
+  {
+    "id": "99eaf8a0-f5de-4ea0-9bce-16842cbc3df0",
+    "serial_number": "123456789",
+    "status": "active",
+    "csr_id": "3f9971ed-78f4-4d89-8e0d-d1978d3ab945",
+    "created_at": "2026-04-10T08:00:00+00:00"
+  }
+]
+```
+
+**Error (401):**
+
+```json
+{
+  "error": "Unauthorized: Missing user identity in token"
+}
+```
+
+---
+
 ## 2. Admin APIs (Quản trị viên)
 
 Các API dành cho admin để quản lý và xử lý CSR cũng như các yêu cầu khác.
@@ -265,6 +300,41 @@ POST /api/v1/approve/123e4567-e89b-12d3-a456-426614174000/approve
 ```json
 {
   "error": "CSR not found"
+}
+```
+
+---
+
+### 2.3 Lấy tất cả certificate (Admin)
+
+- **Endpoint:** `/certificates/all`
+- **Method:** `GET`
+
+#### Query Parameters
+
+- `status` (Optional): `active` | `revoked` | `expired`
+
+#### Response
+
+**Success (200):**
+
+```json
+[
+  {
+    "id": "99eaf8a0-f5de-4ea0-9bce-16842cbc3df0",
+    "serial_number": "123456789",
+    "status": "active",
+    "csr_id": "3f9971ed-78f4-4d89-8e0d-d1978d3ab945",
+    "created_at": "2026-04-10T08:00:00+00:00"
+  }
+]
+```
+
+**Error (403):**
+
+```json
+{
+  "error": "Forbidden: Admin role required"
 }
 ```
 
