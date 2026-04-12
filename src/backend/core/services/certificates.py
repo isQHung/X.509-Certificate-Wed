@@ -3,20 +3,9 @@ from db.supabase_client import get_supabase_client
 from schema.database_schema import Certificate, CertificateWithDetails, Revocation
 from typing import List, Optional
 from uuid import UUID
-import json
 
 supabase = get_supabase_client()
 repo = CertificateListRepository(supabase)
-
-
-def _normalize_json_fields(record: dict) -> dict:
-    """Normalize fields typed as Pydantic Json to JSON strings."""
-    normalized = dict(record)
-    for field in ("subject", "san"):
-        value = normalized.get(field)
-        if isinstance(value, (dict, list)):
-            normalized[field] = json.dumps(value)
-    return normalized
 
 
 def _convert_to_certificate(record: dict) -> Certificate:
@@ -24,7 +13,7 @@ def _convert_to_certificate(record: dict) -> Certificate:
     if not record:
         return None
 
-    cleaned_record = _normalize_json_fields(record)
+    cleaned_record = dict(record)
 
     # Remove nested relationships for base Certificate model
     cleaned_record.pop("certificate_requests", None)
@@ -38,7 +27,7 @@ def _convert_to_certificate_with_details(record: dict) -> CertificateWithDetails
     if not record:
         return None
 
-    cleaned_record = _normalize_json_fields(record)
+    cleaned_record = dict(record)
 
     # Extract and clean nested data
     certificate_requests = cleaned_record.pop("certificate_requests", None)

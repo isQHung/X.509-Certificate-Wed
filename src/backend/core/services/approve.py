@@ -6,7 +6,6 @@ from cryptography.hazmat.primitives import serialization
 import os
 from core.crypto.cert_signer import CertSigner
 from schema.database_schema import CertificateCreate, CertificateRequest
-import json
 from cryptography import x509
 from db.supabase_client import get_supabase_client
 
@@ -20,9 +19,7 @@ def approve_csr(req_id):
 
     if not db:
         raise Exception("CSR not found")
-    
-    db["subject"] = json.dumps(db["subject"])
-    db["san"] = json.dumps(db["san"])
+
     csr_req = CertificateRequest(**db).model_dump(mode='json')
 
     if csr_req["status"] != "pending":
@@ -58,11 +55,7 @@ def approve_csr(req_id):
     serial = str(cert.serial_number)
     
     subject = csr_req["subject"]
-    san = csr_req["san"]  
-    if isinstance(subject, dict):
-        subject = json.dumps(subject)
-    if isinstance(san, (dict, list)):
-        san = json.dumps(san)
+    san = csr_req["san"]
     
     public_key = cert.public_key().public_bytes(
         encoding=serialization.Encoding.PEM,
@@ -97,8 +90,6 @@ def reject_csr(req_id):
     if not db:
         raise Exception("CSR not found")
 
-    db["subject"] = json.dumps(db["subject"])
-    db["san"] = json.dumps(db["san"])
     csr_req = CertificateRequest(**db).model_dump()
     
     if csr_req["status"] != "pending":
@@ -114,7 +105,5 @@ def list_pending_csr():
     db_records= repo.get_csr(status="pending")
     res = []
     for item in db_records:
-        item["subject"] = json.dumps(item["subject"])
-        item["san"] = json.dumps(item["san"])
         res.append(CertificateRequest(**item))
     return res

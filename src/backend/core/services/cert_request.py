@@ -2,7 +2,6 @@ from core.crypto.csr_validator import CSRValidator
 from core.crypto.RSA import RSACAService
 from core.repository.cert_request import *
 from schema.database_schema import CertificateRequestCreate
-import json
 from cryptography import x509
 from db.supabase_client import get_supabase_client
 from uuid import UUID
@@ -41,8 +40,8 @@ def create_csr(data):
     csr_req = CertificateRequestCreate(
         user_id=user_id,
         csr_pem=csr_pem.decode(),
-        subject=json.dumps(subject),
-        san=json.dumps(san),
+        subject=subject,
+        san=san,
     )
 
     req_id = repo.insert_csr(csr_req.model_dump(mode='json'))
