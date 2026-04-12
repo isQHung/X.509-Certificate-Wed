@@ -5,6 +5,7 @@ Handles generating new RSA private key and Certificate Signing Request (CSR)
 
 from flask import Blueprint, request, jsonify
 from core.services.csr_generator import generate_csr
+from api.jwt_utils import get_user_id_from_payload
 
 csr_generator_bp = Blueprint("csr_generator", __name__, url_prefix="/v1")
 
@@ -33,8 +34,12 @@ def generate_csr_endpoint():
         if not data:
             return jsonify({"error": "Empty request body"}), 400
             
+        user_id = get_user_id_from_payload() or data.get("userId") or data.get("user_id")
+        if not user_id:
+            return jsonify({"error": "Unauthorized: Missing User ID"}), 401
+
         # Call the core service to generate CSR and Key
-        result = generate_csr(data)
+        result = generate_csr(data, user_id)
         
         # Return the response
         return jsonify(result), 200

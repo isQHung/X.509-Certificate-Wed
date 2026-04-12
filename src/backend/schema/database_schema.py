@@ -89,6 +89,10 @@ class CertificateRequestBase(BaseModel):
     csr_pem: str = Field(..., description="Certificate Signing Request in PEM format")
     subject: Optional[Dict[str, Any]] = Field(default=None, description="Certificate subject as object")
     san: Optional[List[Any]] = Field(default=None, description="Subject Alternative Names as list")
+    alias: Optional[str] = Field(default=None, description="User key alias")
+    key_algorithm: str = Field(default="RSA", description="Requested key algorithm")
+    key_size: int = Field(default=2048, description="Requested key size")
+    validity_days: int = Field(default=365, description="Requested certificate validity in days")
 
     @field_validator("subject", mode="before")
     @classmethod

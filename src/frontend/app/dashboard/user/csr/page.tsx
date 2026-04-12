@@ -11,6 +11,10 @@ export default function UserCSRPage() {
   const [stateRegion, setStateRegion] = useState("");
   const [locality, setLocality] = useState("");
   const [sanValues, setSanValues] = useState("");
+  const [alias, setAlias] = useState("");
+  const [keyAlgorithm, setKeyAlgorithm] = useState("RSA");
+  const [keySize, setKeySize] = useState("2048");
+  const [validityDays, setValidityDays] = useState("365");
 
   // State quản lý trạng thái xử lý và kết quả
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,6 +51,23 @@ export default function UserCSRPage() {
       return;
     }
 
+    if (!alias.trim()) {
+      setError("Alias là bắt buộc.");
+      return;
+    }
+
+    const parsedValidityDays = Number(validityDays);
+    if (!Number.isInteger(parsedValidityDays) || parsedValidityDays < 1 || parsedValidityDays > 3650) {
+      setError("Validity days phải là số nguyên từ 1 đến 3650.");
+      return;
+    }
+
+    const parsedKeySize = Number(keySize);
+    if (!Number.isInteger(parsedKeySize)) {
+      setError("Key size không hợp lệ.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -71,7 +92,7 @@ export default function UserCSRPage() {
        * Lưu ý: API này sẽ trả về private_key_pem để người dùng tải về
        */
       const response = await fetch(
-        "http://localhost:5000/api/v1/cert_request/generate",
+        "http://localhost:5000/api/v1/cert_request",
         {
           method: "POST",
           credentials: "include",
@@ -79,8 +100,12 @@ export default function UserCSRPage() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
+            alias: alias.trim(),
             subject: sanitizedSubject,
             san: sanList,
+            key_algorithm: keyAlgorithm,
+            key_size: parsedKeySize,
+            validity_days: parsedValidityDays,
           }),
         },
       );
@@ -218,6 +243,81 @@ export default function UserCSRPage() {
           </div>
 
           {/* SAN */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Alias*
+              </label>
+              <input
+                value={alias}
+                onChange={(e) => setAlias(e.target.value)}
+                type="text"
+                placeholder="Ví dụ: web-server-prod"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition text-sm"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Validity Days*
+              </label>
+              <input
+                value={validityDays}
+                onChange={(e) => setValidityDays(e.target.value)}
+                type="number"
+                min={1}
+                max={3650}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition text-sm"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Key Algorithm*
+              </label>
+              <select
+                value={keyAlgorithm}
+                onChange={(e) => {
+                  const nextAlgorithm = e.target.value;
+                  setKeyAlgorithm(nextAlgorithm);
+                  setKeySize(nextAlgorithm === "EC" ? "256" : "2048");
+                }}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition text-sm"
+              >
+                <option value="RSA">RSA</option>
+                <option value="EC">EC (ECDSA)</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Key Size*
+              </label>
+              <select
+                value={keySize}
+                onChange={(e) => setKeySize(e.target.value)}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition text-sm"
+              >
+                {keyAlgorithm === "RSA" ? (
+                  <>
+                    <option value="2048">2048</option>
+                    <option value="3072">3072</option>
+                    <option value="4096">4096</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="256">256 (P-256)</option>
+                    <option value="384">384 (P-384)</option>
+                  </>
+                )}
+              </select>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
               Subject Alternative Names (SAN)
