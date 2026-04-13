@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-// Import hàm createClient từ file supabase.ts của bạn
 import { createClient } from "@/lib/supabase";
 
 interface KeyPair {
@@ -9,12 +8,12 @@ interface KeyPair {
   owner_id: string;
   key_type: string;
   key_size: number;
-  fingerprint: string; // Cột lưu Public Key PEM hoặc mã định danh khóa
+  fingerprint: string;
   created_at: string;
+  alias: string;
 }
 
 export default function UserKeysPage() {
-  // Khởi tạo instance supabase từ hàm được export
   const supabase = useMemo(() => createClient(), []);
 
   const [alias, setAlias] = useState("");
