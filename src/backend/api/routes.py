@@ -9,7 +9,7 @@ from .v1.crl import crl_bp
 from .v1.audit_logs import audit_logs_bp
 from .middleware import jwt_middleware
 from .v1.certificate_inspector import certificate_bp
-from .v1.csr_generator import csr_generator_bp
+from .v1.key_generator import key_generator_bp
 
 routes = Blueprint('routes', __name__, url_prefix='/api')
 
@@ -56,3 +56,4 @@ routes.register_blueprint(certificates_bp)
 routes.register_blueprint(certificate_bp)
 routes.register_blueprint(crl_bp)
 routes.register_blueprint(audit_logs_bp)
+routes.register_blueprint(key_generator_bp)

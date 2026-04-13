@@ -26,21 +26,6 @@ def create_cert_request():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-@customer_bp.route("/cert_request/generate", methods=["POST"])
-def generate_cert_request():
-    try:
-        data = request.get_json()
-        if not isinstance(data, dict):
-            return jsonify({"error": "Invalid JSON payload"}), 400
-        user_id = get_user_id_from_payload() or data.get("userId") or data.get("user_id")
-        if not user_id:
-            return jsonify({"error": "Unauthorized: Missing User ID"}), 401
-        result = generate_csr(data, user_id)
-        
-        return jsonify(result), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
-
 @customer_bp.route("/cert_request/<uuid:req_id>/cancel", methods=["POST"])
 def cancel_cert_request(req_id):
     try:

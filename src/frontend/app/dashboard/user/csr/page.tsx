@@ -1,8 +1,12 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { ChangeEvent, FormEvent, useState } from "react";
+import { createCSR } from "@/lib/api/user";
+
+type CsrMode = "generate" | "upload";
 
 export default function UserCSRPage() {
+  const [csrMode, setCsrMode] = useState<CsrMode>("generate");
   // State quản lý thông tin Subject
   const [commonName, setCommonName] = useState("");
   const [organization, setOrganization] = useState("");
@@ -15,6 +19,7 @@ export default function UserCSRPage() {
   const [keyAlgorithm, setKeyAlgorithm] = useState("RSA");
   const [keySize, setKeySize] = useState("2048");
   const [validityDays, setValidityDays] = useState("365");
+  const [uploadedCsrPem, setUploadedCsrPem] = useState("");
 
   // State quản lý trạng thái xử lý và kết quả
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -38,6 +43,18 @@ export default function UserCSRPage() {
     URL.revokeObjectURL(url);
   };
 
+  const readCsrFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const content = await file.text();
+      setUploadedCsrPem(content);
+    } catch {
+      setError("Không thể đọc file CSR. Vui lòng thử lại.");
+    }
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
@@ -45,33 +62,49 @@ export default function UserCSRPage() {
     setCsrPem(null);
     setRequestId(null);
 
-    // Kiểm tra Common Name bắt buộc
-    if (!commonName.trim()) {
-      setError("Common Name (CN) là bắt buộc.");
-      return;
-    }
-
-    if (!alias.trim()) {
-      setError("Alias là bắt buộc.");
-      return;
-    }
-
-    const parsedValidityDays = Number(validityDays);
-    if (!Number.isInteger(parsedValidityDays) || parsedValidityDays < 1 || parsedValidityDays > 3650) {
-      setError("Validity days phải là số nguyên từ 1 đến 3650.");
-      return;
-    }
-
-    const parsedKeySize = Number(keySize);
-    if (!Number.isInteger(parsedKeySize)) {
-      setError("Key size không hợp lệ.");
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
-      // Chuẩn bị dữ liệu Subject
+      if (csrMode === "upload") {
+        const csrPem = uploadedCsrPem.trim();
+        if (!csrPem) {
+          setError("CSR PEM là bắt buộc khi chọn upload CSR.");
+          return;
+        }
+
+        const data = await createCSR({ csr_pem: csrPem });
+        setSuccessMessage("CSR đã được gửi lên hệ thống thành công.");
+        setCsrPem(csrPem);
+        setRequestId(data.request_id ?? null);
+        return;
+      }
+
+      if (!commonName.trim()) {
+        setError("Common Name (CN) là bắt buộc.");
+        return;
+      }
+
+      if (!alias.trim()) {
+        setError("Alias là bắt buộc.");
+        return;
+      }
+
+      const parsedValidityDays = Number(validityDays);
+      if (
+        !Number.isInteger(parsedValidityDays) ||
+        parsedValidityDays < 1 ||
+        parsedValidityDays > 3650
+      ) {
+        setError("Validity days phải là số nguyên từ 1 đến 3650.");
+        return;
+      }
+
+      const parsedKeySize = Number(keySize);
+      if (!Number.isInteger(parsedKeySize)) {
+        setError("Key size không hợp lệ.");
+        return;
+      }
+
       const sanitizedSubject = {
         CN: commonName.trim(),
         O: organization.trim() || undefined,
@@ -81,57 +114,26 @@ export default function UserCSRPage() {
         L: locality.trim() || undefined,
       };
 
-      // Xử lý danh sách SAN
       const sanList = sanValues
         .split(",")
         .map((item) => item.trim())
         .filter((item) => item.length > 0);
 
-      /**
-       * Gửi yêu cầu đến Backend
-       * Lưu ý: API này sẽ trả về private_key_pem để người dùng tải về
-       */
-      const response = await fetch(
-        "http://localhost:5000/api/v1/cert_request",
-        {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            alias: alias.trim(),
-            subject: sanitizedSubject,
-            san: sanList,
-            key_algorithm: keyAlgorithm,
-            key_size: parsedKeySize,
-            validity_days: parsedValidityDays,
-          }),
-        },
-      );
+      const data = await createCSR({
+        alias: alias.trim(),
+        subject: sanitizedSubject,
+        san: sanList,
+        key_algorithm: keyAlgorithm === "EC" ? "EC" : "RSA",
+        key_size: parsedKeySize,
+        validity_days: parsedValidityDays,
+      });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        // Chuyển đối tượng lỗi JSON thành chuỗi để hiển thị nếu cần
-        const errorMsg =
-          typeof data.error === "object"
-            ? JSON.stringify(data.error)
-            : data.error;
-        throw new Error(errorMsg || "Không thể tạo CSR. Vui lòng thử lại.");
-      }
-
-      // Xử lý thành công
       setSuccessMessage("CSR đã được tạo và gửi lên hệ thống thành công.");
-      setCsrPem(data.csr_pem);
-      setRequestId(data.request_id);
+      setCsrPem(data.csr_pem ?? null);
+      setRequestId(data.request_id ?? null);
 
-      // Tự động tải Private Key về máy ngay lập tức
       if (data.private_key_pem) {
-        downloadKeyFile(
-          data.private_key_pem,
-          `${commonName.trim() || "private"}.key`,
-        );
+        downloadKeyFile(data.private_key_pem, `${commonName.trim() || "private"}.key`);
       }
     } catch (err) {
       setError(
@@ -149,13 +151,67 @@ export default function UserCSRPage() {
           Gửi yêu cầu CSR
         </h1>
         <p className="text-slate-500 mt-2">
-          Tạo cặp khóa và CSR, sau đó hệ thống sẽ tự động lưu trữ yêu cầu chờ
-          duyệt.
+          Chọn upload CSR PEM hoặc để hệ thống tự tạo CSR từ thông tin bạn cung
+          cấp.
         </p>
       </header>
 
       <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
         <form className="p-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <button
+              type="button"
+              onClick={() => setCsrMode("generate")}
+              className={`py-3 px-4 rounded-xl border text-sm font-semibold transition ${
+                csrMode === "generate"
+                  ? "bg-slate-900 text-white border-slate-900"
+                  : "bg-slate-50 text-slate-700 border-slate-200"
+              }`}
+            >
+              Hệ thống tạo CSR
+            </button>
+            <button
+              type="button"
+              onClick={() => setCsrMode("upload")}
+              className={`py-3 px-4 rounded-xl border text-sm font-semibold transition ${
+                csrMode === "upload"
+                  ? "bg-slate-900 text-white border-slate-900"
+                  : "bg-slate-50 text-slate-700 border-slate-200"
+              }`}
+            >
+              Upload CSR PEM
+            </button>
+          </div>
+
+          {csrMode === "upload" ? (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  CSR PEM*
+                </label>
+                <textarea
+                  value={uploadedCsrPem}
+                  onChange={(e) => setUploadedCsrPem(e.target.value)}
+                  placeholder="-----BEGIN CERTIFICATE REQUEST-----"
+                  className="w-full h-56 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition text-xs font-mono"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  Hoặc chọn file .pem/.csr
+                </label>
+                <input
+                  type="file"
+                  accept=".pem,.csr,.txt"
+                  onChange={readCsrFile}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+                />
+              </div>
+            </div>
+          ) : (
+            <>
           {/* Hàng 1: CN & O */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
@@ -330,6 +386,8 @@ export default function UserCSRPage() {
               className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition text-sm"
             />
           </div>
+            </>
+          )}
 
           {/* Hiển thị lỗi */}
           {error && (
@@ -346,7 +404,11 @@ export default function UserCSRPage() {
             disabled={isSubmitting}
             className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition shadow-lg shadow-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? "Đang xử lý..." : "Tạo và gửi yêu cầu CSR"}
+            {isSubmitting
+              ? "Đang xử lý..."
+              : csrMode === "upload"
+                ? "Upload và gửi yêu cầu CSR"
+                : "Tạo và gửi yêu cầu CSR"}
           </button>
         </form>
 
@@ -384,10 +446,12 @@ export default function UserCSRPage() {
               </div>
             )}
 
-            <p className="text-[10px] text-center text-slate-400 italic">
-              🔒 Lưu ý: Private Key đã được tự động tải về máy. Hệ thống không
-              lưu giữ khóa này.
-            </p>
+            {csrMode === "generate" && (
+              <p className="text-[10px] text-center text-slate-400 italic">
+                🔒 Lưu ý: Private Key đã được tự động tải về máy. Hệ thống không
+                lưu giữ khóa này.
+              </p>
+            )}
           </div>
         )}
       </div>

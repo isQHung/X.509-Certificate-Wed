@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase";
+import { generateKeyPair } from "@/lib/api/user";
 
 interface KeyPair {
   id: string;
@@ -81,36 +82,16 @@ export default function UserKeysPage() {
     setIsGenerating(true);
 
     try {
-      // 1. Lấy session từ Supabase
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const storedUserId = localStorage.getItem("userId");
-      const response = await fetch(
-        "http://localhost:5000/api/v1/cert_request/generate",
-        {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            userId: storedUserId,
-            alias: alias.trim(),
-            // subject: { CN: alias.trim() },
-            key_size: algorithm.includes("4096") ? 4096 : 2048,
-          }),
-        },
-      );
+      const data = await generateKeyPair({
+        alias: alias.trim(),
+        key_algorithm: "RSA",
+        key_size: algorithm.includes("4096") ? 4096 : 2048,
+      });
 
-      const data = await response.json();
       console.log("Response từ Backend:", data);
-      console.log("Response Object:", response);
       if (data.key_pair_id) {
         console.log("Đã lấy được UserId và lưu DB thành công!");
       }
-      if (!response.ok)
-        throw new Error(data.error || "Lỗi khi phát sinh cặp khóa.");
 
       if (data.private_key_pem) {
         // Tải Private Key về vì Database không lưu trữ khóa bí mật
@@ -122,8 +103,8 @@ export default function UserKeysPage() {
         // Làm mới danh sách từ bảng key_pairs sau khi backend đã insert thành công
         await fetchKeys();
       }
-    } catch (err: any) {
-      setError(err.message || "Lỗi hệ thống.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Lỗi hệ thống.");
     } finally {
       setIsGenerating(false);
     }

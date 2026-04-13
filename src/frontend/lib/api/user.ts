@@ -1,11 +1,40 @@
 import api from "@/lib/apiClient";
 
-export async function createCSR(payload: {
-    user_id: string;
+type SubjectPayload = Partial<{
+    CN: string;
+    O: string;
+    OU: string;
+    C: string;
+    ST: string;
+    L: string;
+}>;
+
+export type CreateCsrByUploadPayload = {
     csr_pem: string;
-    subject: any;
-}) {
+};
+
+export type CreateCsrByGeneratePayload = {
+    alias: string;
+    subject: SubjectPayload;
+    san?: string[];
+    key_algorithm?: "RSA" | "EC";
+    key_size?: number;
+    validity_days?: number;
+};
+
+export async function createCSR(
+    payload: CreateCsrByUploadPayload | CreateCsrByGeneratePayload,
+) {
     const res = await api.post("/cert_request", payload);
+    return res.data;
+}
+
+export async function generateKeyPair(payload: {
+    alias: string;
+    key_algorithm?: "RSA" | "EC";
+    key_size?: number;
+}) {
+    const res = await api.post("/keys/generate", payload);
     return res.data;
 }
 
