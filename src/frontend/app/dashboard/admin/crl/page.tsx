@@ -1,5 +1,5 @@
 "use client";
-import { generateCRL, getLatestCRL } from "@/lib/api/admin";
+import { generateCRL, getLatestCRL, getRecentRevocations } from "@/lib/api/admin";
 import { useApi } from "@/lib/useApi";
 import { saveAs } from "file-saver";
 import { useEffect, useState } from "react";
@@ -11,10 +11,14 @@ export default function CRLManagementPage() {
 
     const fetchLatest = async () => {
         try {
-            const data = await call(getLatestCRL);
-            setCrl(data);
+            // Fetch separately to avoid one failure blocking the other
+            const crlData = await call(getLatestCRL).catch(() => null);
+            const revData = await call(getRecentRevocations).catch(() => []);
+            
+            setCrl(crlData);
+            setRevocations(revData || []);
         } catch (err) {
-            setCrl(null);
+            console.error("Error fetching CRL data:", err);
         }
     };
 
@@ -25,12 +29,11 @@ export default function CRLManagementPage() {
     const handleGenerate = async () => {
         try {
             const data = await call(generateCRL);
+            alert(`Đã tạo bản cập nhật CRL thành công! Đã chuyển ${data?.revocations_moved || 0} bản ghi thu hồi vào danh sách.`);
             await fetchLatest();
-            // if CRL returned, show moved count
-            if (data?.revocations_moved) {
-                // optionally update revocations list or toast handled by useApi
-            }
-        } catch (err) {}
+        } catch (err: any) {
+            alert("Lỗi khi tạo CRL: " + (err.response?.data?.error || err.message));
+        }
     };
 
     const handleDownload = () => {
@@ -69,19 +72,24 @@ export default function CRLManagementPage() {
                                 Không có bản ghi thu hồi hiển thị.
                             </p>
                         ) : (
-                            revocations.map((r) => (
-                                <div
-                                    key={r.serial_number}
-                                    className="p-3 border rounded-lg"
-                                >
-                                    <div className="font-mono text-sm text-indigo-600">
-                                        {r.serial_number}
+                                revocations.map((r, idx) => (
+                                    <div
+                                        key={r.id || idx}
+                                        className="p-3 border border-slate-100 bg-slate-50/50 rounded-lg flex justify-between items-center"
+                                    >
+                                        <div>
+                                            <div className="font-mono text-xs font-bold text-indigo-600">
+                                                SN: {r.serial_number}
+                                            </div>
+                                            <div className="text-xs text-slate-500 mt-1 uppercase font-semibold">
+                                                {r.reason || "Cessation of Operation"}
+                                            </div>
+                                        </div>
+                                        <div className="text-[10px] font-mono text-slate-400 bg-white px-2 py-1 rounded border border-slate-100 shadow-sm">
+                                            {r.revoked_at ? new Date(r.revoked_at).toLocaleString() : "-"}
+                                        </div>
                                     </div>
-                                    <div className="text-sm text-slate-600">
-                                        {r.reason}
-                                    </div>
-                                </div>
-                            ))
+                                ))
                         )}
                     </div>
                 </div>
@@ -98,13 +106,13 @@ export default function CRLManagementPage() {
                         <p>
                             Ngày tạo:{" "}
                             <span className="font-bold">
-                                {crl?.generated_at ?? "-"}
+                                {crl?.generated_at ? new Date(crl.generated_at).toLocaleString() : "-"}
                             </span>
                         </p>
                         <p>
                             Hết hạn:{" "}
                             <span className="font-bold">
-                                {crl?.next_update ?? "-"}
+                                {crl?.next_update ? new Date(crl.next_update).toLocaleString() : "-"}
                             </span>
                         </p>
                     </div>

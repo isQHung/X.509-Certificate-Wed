@@ -13,7 +13,7 @@ export default function DashboardLayout({
     const pathname = usePathname();
 
     useEffect(() => {
-        setRole(localStorage.getItem("userRole") || "CUSTOMER");
+        setRole((localStorage.getItem("userRole") || "CUSTOMER").toUpperCase());
     }, []);
 
     const adminMenu = [

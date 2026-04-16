@@ -1,12 +1,13 @@
 "use client";
 import CertificateUploader from "@/components/certificate/CertificateUploader";
 import { createClient } from "@/lib/supabase";
+import api from "@/lib/axios";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export default function DashboardPage() {
-    const [role, setRole] = useState<string>(
-        () => localStorage.getItem("userRole") || "CUSTOMER",
+    const [role, setRole] = useState<string>(() =>
+        (localStorage.getItem("userRole") || "CUSTOMER").toUpperCase(),
     );
     const [stats, setStats] = useState<any>(null);
     const [recentRequests, setRecentRequests] = useState<any[]>([]);
@@ -50,18 +51,24 @@ export default function DashboardPage() {
                     });
                 } else {
                     // CUSTOMER view
-                    if (userId) {
-                        const { count: myCerts } = await supabase
-                            .from("certificates")
-                            .select("*", { count: "exact", head: true })
-                            .eq("owner_id", userId);
+                    try {
+                        const certResp = await api.get("/api/v1/certificates/my");
+                        if (certResp.data && certResp.data.success) {
+                            setCertCount(certResp.data.data.length);
+                        } else {
+                            setCertCount(0);
+                        }
+                    } catch (e) {
+                        console.error("Lỗi khi tải số lượng chứng chỉ:", e);
+                        setCertCount(0);
+                    }
 
-                        setCertCount(myCerts || 0);
+                    if (userId) {
 
                         const { data: reqs } = await supabase
                             .from("certificate_requests")
                             .select("id, common_name, created_at, status")
-                            .eq("owner_id", userId)
+                            .eq("user_id", userId)
                             .order("created_at", { ascending: false })
                             .limit(5);
 
@@ -107,7 +114,7 @@ export default function DashboardPage() {
           ];
 
     // --- GIAO DIỆN ADMIN ---
-    if (role === "admin") {
+    if (role === "ADMIN") {
         return (
             <div className="space-y-8">
                 <header>
@@ -232,7 +239,9 @@ export default function DashboardPage() {
                         </h3>
                     </div>
                     <div className="text-4xl font-black text-indigo-600">
-                        01
+                        {certCount !== null
+                            ? String(certCount).padStart(2, "0")
+                            : "—"}
                     </div>
                     <Link
                         href="/dashboard/user/certificates"
@@ -282,9 +291,9 @@ export default function DashboardPage() {
                                             {r.common_name}
                                         </td>
                                         <td className="px-6 py-4 text-xs">
-                                            {new Date(r.created_at)
-                                                .toISOString()
-                                                .slice(0, 10)}
+                                            {new Date(
+                                                r.created_at,
+                                            ).toLocaleDateString()}
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className="px-3 py-1 bg-orange-50 text-orange-600 rounded-full text-[10px] font-black uppercase">

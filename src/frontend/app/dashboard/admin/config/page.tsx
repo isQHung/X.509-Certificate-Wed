@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 export default function ConfigTechnicalPage() {
     const [configs, setConfigs] = useState<any[]>([]);
     const [selected, setSelected] = useState<any | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveStatus, setSaveStatus] = useState<"success" | "error" | null>(null);
     const { call } = useApi();
 
     const fetch = async () => {
@@ -25,6 +27,9 @@ export default function ConfigTechnicalPage() {
 
     const handleSave = async () => {
         if (!selected || !selected.id) return;
+        setIsSaving(true);
+        setSaveStatus(null);
+        
         const payload = {
             name: selected.name,
             key_algorithm: selected.key_algorithm,
@@ -37,7 +42,13 @@ export default function ConfigTechnicalPage() {
         try {
             await call(updateSystemConfig, selected.id, payload);
             await fetch();
-        } catch (err) {}
+            setSaveStatus("success");
+            setTimeout(() => setSaveStatus(null), 3000);
+        } catch (err) {
+            setSaveStatus("error");
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -156,10 +167,24 @@ export default function ConfigTechnicalPage() {
 
                         <button
                             onClick={handleSave}
-                            className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition shadow-lg shadow-indigo-100"
+                            disabled={isSaving}
+                            className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition shadow-lg shadow-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            Lưu cấu hình & Áp dụng
+                            {isSaving ? "Đang xử lý..." : "Lưu cấu hình & Áp dụng"}
                         </button>
+                        
+                        {saveStatus === "success" && (
+                            <div className="p-4 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-100 text-sm font-semibold flex items-center justify-center gap-2 animate-pulse">
+                                <span>✓</span>
+                                Đã lưu cấu hình thành công!
+                            </div>
+                        )}
+                        {saveStatus === "error" && (
+                            <div className="p-4 bg-red-50 text-red-700 rounded-xl border border-red-100 text-sm font-semibold flex items-center justify-center gap-2">
+                                <span>✕</span>
+                                Đã có lỗi xảy ra! Không thể lưu cấu hình.
+                            </div>
+                        )}
                     </>
                 ) : (
                     <div className="text-sm text-slate-500 italic">

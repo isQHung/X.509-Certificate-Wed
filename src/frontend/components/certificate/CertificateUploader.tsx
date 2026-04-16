@@ -8,10 +8,12 @@ import CertificateUploadForm from "./CertificateUploadForm";
 interface Props {
     isOpen: boolean;
     onClose: () => void;
+    onSuccess?: () => void;
 }
 
-export default function CertificateUploader({ isOpen, onClose }: Props) {
+export default function CertificateUploader({ isOpen, onClose, onSuccess }: Props) {
     const [isUploading, setIsUploading] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [inspectedCert, setInspectedCert] = useState<any | null>(null);
     const [error, setError] = useState<string | null>(null);
 
@@ -22,7 +24,7 @@ export default function CertificateUploader({ isOpen, onClose }: Props) {
             <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
             <div className="relative w-full max-w-4xl mx-4">
-                <div className="bg-white rounded-2xl shadow-lg p-6">
+                <div className="bg-white rounded-2xl shadow-lg p-6 max-h-[90vh] overflow-y-auto">
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg font-semibold">
                             Upload chứng chỉ
@@ -43,6 +45,7 @@ export default function CertificateUploader({ isOpen, onClose }: Props) {
                                     setIsUploading(true);
                                     setError(null);
                                     setInspectedCert(null);
+                                    setSelectedFile(file);
 
                                     const form = new FormData();
                                     form.append("certificate", file, file.name);
@@ -86,12 +89,47 @@ export default function CertificateUploader({ isOpen, onClose }: Props) {
                             <div className="flex justify-end gap-3">
                                 <button
                                     className="px-4 py-2 rounded bg-slate-100 text-slate-800"
-                                    onClick={() => setInspectedCert(null)}
+                                    onClick={() => {
+                                        setInspectedCert(null);
+                                        setSelectedFile(null);
+                                    }}
                                 >
                                     Tải lên khác
                                 </button>
                                 <button
                                     className="px-4 py-2 rounded bg-indigo-600 text-white"
+                                    onClick={async () => {
+                                        if (!selectedFile) return;
+                                        try {
+                                            setIsUploading(true);
+                                            setError(null);
+                                            
+                                            const form = new FormData();
+                                            form.append("certificate", selectedFile, selectedFile.name);
+                                            
+                                            const resp = await api.post("/api/v1/certificates/import", form, {
+                                                headers: { "Content-Type": "multipart/form-data" }
+                                            });
+                                            
+                                            if (resp.data?.success) {
+                                                if (onSuccess) onSuccess();
+                                                onClose();
+                                            } else {
+                                                setError("Không thể lưu chứng chỉ vào cơ sở dữ liệu");
+                                            }
+                                        } catch (e: unknown) {
+                                            const msg = e instanceof Error ? e.message : String(e);
+                                            setError(`Lỗi khi lưu: ${msg}`);
+                                        } finally {
+                                            setIsUploading(false);
+                                        }
+                                    }}
+                                    disabled={isUploading}
+                                >
+                                    {isUploading ? "Đang lưu..." : "Lưu chứng chỉ"}
+                                </button>
+                                <button
+                                    className="px-4 py-2 rounded border border-slate-300 text-slate-700"
                                     onClick={onClose}
                                 >
                                     Đóng

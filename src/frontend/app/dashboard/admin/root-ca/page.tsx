@@ -1,8 +1,8 @@
 "use client";
-import { getLatestCRL, getRootCertificate, revokeRootCA } from "@/lib/api/admin";
+import { getLatestCRL, getRootCertificate, revokeRootCA, generateRootCA } from "@/lib/api/admin";
 import { useApi } from "@/lib/useApi";
 import { saveAs } from "file-saver";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function PemModal({ pem, onClose }: { pem: string; onClose: () => void }) {
     return (
@@ -42,11 +42,35 @@ function PemModal({ pem, onClose }: { pem: string; onClose: () => void }) {
 }
 
 export default function RootCAManagementPage() {
-    const [hasRootCA, setHasRootCA] = useState(true);
+    const [hasRootCA, setHasRootCA] = useState<boolean | null>(null);
     const { call } = useApi();
+    const [rootCert, setRootCert] = useState<any>(null);
     const [pem, setPem] = useState<string | null>(null);
     const [showPem, setShowPem] = useState(false);
     const [revoking, setRevoking] = useState(false);
+
+    const fetchRoot = async () => {
+        try {
+            const res = await call(getRootCertificate);
+            if (res?.success && res?.pem) {
+                setRootCert(res);
+                setPem(res.pem);
+                setHasRootCA(true);
+            } else {
+                setHasRootCA(false);
+            }
+        } catch (e) {
+            setHasRootCA(false);
+        }
+    };
+
+    useEffect(() => {
+        void fetchRoot();
+    }, []);
+
+    if (hasRootCA === null) {
+        return <div className="text-center py-10 font-bold text-slate-500">Đang tải cấu hình Root CA...</div>;
+    }
 
     return (
         <div className="space-y-6">
@@ -68,8 +92,9 @@ export default function RootCAManagementPage() {
                                 setRevoking(true);
                                 await call(revokeRootCA);
                                 setHasRootCA(false);
-                                // optionally show toast via useApi
-                            } catch (e) {
+                                alert("Đã thu hồi Root CA và xóa tệp tin thành công!");
+                            } catch (e: any) {
+                                alert("Có lỗi xảy ra khi thu hồi Root CA: " + (e.response?.data?.message || e.message || "Unknown error"));
                             } finally {
                                 setRevoking(false);
                             }
@@ -102,10 +127,22 @@ export default function RootCAManagementPage() {
                         </p>
                     </div>
                     <button
-                        onClick={() => setHasRootCA(true)}
+                        onClick={async () => {
+                            try {
+                                const resp = await call(generateRootCA);
+                                if (resp?.success) {
+                                    alert("Khởi tạo Root CA từ thông tin ENV thành công!");
+                                    await fetchRoot();
+                                } else {
+                                    alert("Lỗi: " + resp?.message);
+                                }
+                            } catch (e: any) {
+                                alert("Đã xảy ra lỗi khi tạo Root CA: " + (e.response?.data?.message || e.message));
+                            }
+                        }}
                         className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition"
                     >
-                        Khởi tạo Root CA ngay
+                        Tự động khởi tạo từ ENV
                     </button>
                 </div>
             ) : (
@@ -121,24 +158,27 @@ export default function RootCAManagementPage() {
                                 {[
                                     {
                                         label: "Common Name (CN)",
-                                        value: "X509 System Root Authority",
+                                        value: rootCert?.subject?.commonName || "UNKNOWN",
                                     },
                                     {
                                         label: "Organization (O)",
-                                        value: "Hệ thống Quản lý Chứng chỉ số",
+                                        value: rootCert?.subject?.organizationName || "N/A",
                                     },
-                                    { label: "Country (C)", value: "VN" },
+                                    { 
+                                        label: "Country (C)", 
+                                        value: rootCert?.subject?.countryName || "N/A" 
+                                    },
                                     {
                                         label: "Algorithm",
-                                        value: "RSA 4096-bit",
+                                        value: `RSA ${rootCert?.key_size || 2048}-bit`,
                                     },
                                     {
                                         label: "Serial Number",
-                                        value: "55:01:A2:BC:99:FF:E0",
+                                        value: rootCert?.serial_number || "N/A",
                                     },
                                     {
                                         label: "Signature Hash",
-                                        value: "SHA-256",
+                                        value: rootCert?.hash_algorithm || "UNKNOWN",
                                     },
                                 ].map((item, i) => (
                                     <div key={i} className="space-y-1">
@@ -163,7 +203,9 @@ export default function RootCAManagementPage() {
                                         Ngày phát hành
                                     </p>
                                     <p className="text-sm font-mono font-bold">
-                                        2026-01-01 00:00:00
+                                        {rootCert?.valid_from 
+                                            ? new Date(rootCert.valid_from).toLocaleString() 
+                                            : "N/A"}
                                     </p>
                                 </div>
                                 <div className="text-slate-300">➔</div>
@@ -172,7 +214,9 @@ export default function RootCAManagementPage() {
                                         Ngày hết hạn
                                     </p>
                                     <p className="text-sm font-mono font-bold text-red-600">
-                                        2036-01-01 00:00:00
+                                        {rootCert?.valid_to 
+                                            ? new Date(rootCert.valid_to).toLocaleString() 
+                                            : "N/A"}
                                     </p>
                                 </div>
                             </div>
@@ -214,13 +258,12 @@ export default function RootCAManagementPage() {
                                     📥 Tải xuống CRL mới nhất
                                 </button>
                                 <button
-                                    onClick={async () => {
-                                        try {
-                                            const res = await call(getRootCertificate);
-                                            const got = res?.pem ?? res?.data?.pem ?? res;
-                                            setPem(got ?? "");
+                                    onClick={() => {
+                                        if (rootCert?.pem) {
+                                            setPem(rootCert.pem);
                                             setShowPem(true);
-                                        } catch (e) {
+                                        } else {
+                                            alert("Lỗi: Không tìm thấy nội dung mã PEM! Dữ liệu có thể đã bị rỗng hoặc lỗi máy chủ.");
                                         }
                                     }}
                                     className="w-full py-3 border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition"

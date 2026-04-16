@@ -125,3 +125,12 @@ class CrlRepository:
         if not res.data:
             return None
         return res.data[0]
+    def list_recent_crl_entries(self, limit: int = 20) -> List[dict[str, Any]]:
+        res = (
+            self.db.table(self.crl_entries_table)
+            .select("*")
+            .order("revoked_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return res.data or []

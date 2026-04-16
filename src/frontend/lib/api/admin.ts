@@ -25,6 +25,11 @@ export async function getLatestCRL() {
     return res.data;
 }
 
+export async function getRecentRevocations() {
+    const res = await api.get(`/crl/revocations`);
+    return res.data;
+}
+
 export async function getRootCertificate() {
     const res = await api.get(`/root_ca/certificate`);
     return res.data;
@@ -32,6 +37,11 @@ export async function getRootCertificate() {
 
 export async function revokeRootCA() {
     const res = await api.post(`/admin/root/revoke`);
+    return res.data;
+}
+
+export async function generateRootCA() {
+    const res = await api.post(`/admin/root/generate`);
     return res.data;
 }
 

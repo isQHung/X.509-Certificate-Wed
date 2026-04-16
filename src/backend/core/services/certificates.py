@@ -76,3 +76,17 @@ def get_certificate_details(cert_id: UUID, include_revocations: bool = False) ->
     # This would require adding a method to repository to fetch by ID
     # For now, returning a placeholder that can be extended
     pass
+
+
+def import_external_certificate_service(user_id: UUID, cert_data: dict, pem_content: str) -> dict:
+    """Import an external certificate into the system."""
+    if not user_id:
+        raise ValueError("Missing user_id")
+    
+    record = repo.import_external_certificate(user_id=user_id, cert_data=cert_data, pem_content=pem_content)
+    
+    # Convert to Pydantic model for validation
+    cert = _convert_to_certificate(record)
+    if cert:
+        return cert.model_dump()
+    return {}
