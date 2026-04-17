@@ -26,8 +26,14 @@ export default function DashboardPage() {
                 const userId = userData?.user?.id || null;
 
                 if (role === "ADMIN") {
-                    const { count: totalCSR } = await supabase
+                    // Count total requests (CSRs)
+                    const { count: requestsCount } = await supabase
                         .from("certificate_requests")
+                        .select("*", { count: "exact", head: true });
+
+                    // Count total issued/imported certificates
+                    const { count: certsCount } = await supabase
+                        .from("certificates")
                         .select("*", { count: "exact", head: true });
 
                     const { count: waiting } = await supabase
@@ -36,15 +42,17 @@ export default function DashboardPage() {
                         .eq("status", "pending");
 
                     const { count: issued } = await supabase
-                        .from("certificates")
-                        .select("*", { count: "exact", head: true });
+                        .from("certificate_requests")
+                        .select("*", { count: "exact", head: true })
+                        .eq("status", "issued");
 
                     const { count: revoked } = await supabase
-                        .from("revocations")
-                        .select("*", { count: "exact", head: true });
+                        .from("certificates")
+                        .select("*", { count: "exact", head: true })
+                        .eq("status", "revoked");
 
                     setStats({
-                        totalCSR: totalCSR || 0,
+                        totalCSR: (requestsCount || 0) + (certsCount || 0),
                         waiting: waiting || 0,
                         issued: issued || 0,
                         revoked: revoked || 0,
@@ -145,11 +153,11 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <section className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    {/* <section className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                         <h3 className="font-bold text-slate-800 mb-6">
                             Thống kê cấp phát (7 ngày qua)
                         </h3>
-                        {/* <div className="flex items-end gap-4 h-48">
+                        <div className="flex items-end gap-4 h-48">
                             {[40, 70, 45, 90, 65, 80, 55].map((height, i) => (
                                 <div
                                     key={i}
@@ -157,8 +165,8 @@ export default function DashboardPage() {
                                     style={{ height: `${height}%` }}
                                 />
                             ))}
-                        </div> */}
-                    </section>
+                        </div>
+                    </section> */}
 
                     <section className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
                         <h3 className="font-bold text-slate-800">

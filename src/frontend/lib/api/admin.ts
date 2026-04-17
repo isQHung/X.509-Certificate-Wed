@@ -65,6 +65,11 @@ export async function rejectRevocation(serial: string) {
     return res.data;
 }
 
+export async function revokeCertificateDirect(serial: string) {
+    const res = await api.post(`/admin/revoke/direct/${serial}`);
+    return res.data;
+}
+
 // System config endpoints
 export async function getAllSystemConfigs() {
     const res = await api.get(`/system_config/`);

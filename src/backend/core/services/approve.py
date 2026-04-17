@@ -71,12 +71,16 @@ def approve_csr(req_id):
     ).decode()
 
     issuer_env = os.getenv("ISSUER_CA")
-    if not issuer_env:
-        raise Exception("Missing ISSUER_CA in environment")
-    try:
-        issuer_id = UUID(issuer_env)
-    except ValueError as exc:
-        raise Exception("ISSUER_CA must be a valid UUID") from exc
+    issuer_id = None
+    if issuer_env:
+        try:
+            parsed_id = UUID(issuer_env)
+            # check if it exists in DB
+            check = supabase.table("certificates").select("id").eq("id", str(parsed_id)).execute()
+            if check.data:
+                issuer_id = parsed_id
+        except ValueError:
+            pass
 
     cert_data = CertificateCreate(
         serial_number=str(cert.serial_number),

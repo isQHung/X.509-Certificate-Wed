@@ -92,3 +92,44 @@ class RevocationService:
         }).eq("id", request_id).execute()
             
         return True
+
+    @staticmethod
+    def revoke_certificate_by_serial(serial_number: str, reason: str = "Admin Direct Revocation") -> bool:
+        now = datetime.now(timezone.utc)
+        now_iso = now.isoformat()
+
+        # 1. Tìm chứng chỉ
+        cert_res = supabase.table("certificates") \
+            .select("id, status") \
+            .eq("serial_number", serial_number) \
+            .execute()
+        
+        if not cert_res.data:
+            raise ValueError(f"Không tìm thấy chứng chỉ với Serial: {serial_number}")
+            
+        cert_id = cert_res.data[0]["id"]
+        
+        if cert_res.data[0]["status"] == "revoked":
+            raise ValueError(f"Chứng chỉ Serial {serial_number} đã bị thu hồi trước đó.")
+
+        # 2. Cập nhật trạng thái chứng chỉ
+        supabase.table("certificates").update({
+            "status": "revoked"
+        }).eq("id", cert_id).execute()
+
+        # 3. Chèn vào bảng revocations (cho CRL)
+        supabase.table("revocations").insert({
+            "certificate_id": cert_id,
+            "serial_number": serial_number,
+            "reason": reason,
+            "revoked_at": now_iso
+        }).execute()
+
+        # 4. Tìm và đóng bất kỳ yêu cầu thu hồi nào đang chờ (nếu có)
+        supabase.table("revocation_requests").update({
+            "status": "approved",
+            "approved_at": now_iso,
+            "approved_by": None # Có thể bổ sung actor_id sau
+        }).eq("certificate_id", cert_id).eq("status", "pending").execute()
+
+        return True

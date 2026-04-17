@@ -460,12 +460,6 @@ class PaginatedResponse(BaseModel):
     limit: int
     total_pages: int
 
-    @field_validator('total_pages')
-    def calculate_total_pages(cls, v, values):
-        if 'total' in values and 'limit' in values:
-            return (values['total'] + values['limit'] - 1) // values['limit']
-        return v
-
 
 # ============================================
 # UTILITY FUNCTIONS

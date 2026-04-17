@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import api from "@/lib/axios";
+import { revokeCertificateDirect } from "@/lib/api/admin";
 
 interface Certificate {
   id: string;
@@ -33,29 +34,50 @@ export default function IssuedCertificatesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchCertificates = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await api.get("/api/v1/certificates/all");
+  const fetchCertificates = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await api.get("/api/v1/certificates/all");
 
-        if (response.data?.success) {
-          setCertificates(response.data.data || []);
-          return;
-        }
-
-        setError("Không thể tải danh sách chứng chỉ");
-      } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : "Lỗi không xác định";
-        setError(`Lỗi khi tải chứng chỉ: ${errorMessage}`);
-      } finally {
-        setLoading(false);
+      if (response.data?.success) {
+        setCertificates(response.data.data || []);
+        return;
       }
-    };
 
+      setError("Không thể tải danh sách chứng chỉ");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Lỗi không xác định";
+      setError(`Lỗi khi tải chứng chỉ: ${errorMessage}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchCertificates();
   }, []);
+
+  const handleRevoke = async (cert: Certificate) => {
+    if (!window.confirm(`Bạn có chắc chắn muốn thu hồi chứng chỉ có Serial: ${cert.serial_number}? Hành động này không thể hoàn tác.`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await revokeCertificateDirect(cert.serial_number);
+      if (res.success) {
+        alert(res.message);
+        await fetchCertificates();
+      } else {
+        alert(`Lỗi: ${res.message}`);
+      }
+    } catch (err: any) {
+      alert(`Lỗi khi thu hồi: ${err.response?.data?.message || err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -94,7 +116,17 @@ export default function IssuedCertificatesPage() {
                   <td className="p-4 text-sm">{formatDate(cert.valid_to)}</td>
                   <td className="p-4 text-sm">{cert.status}</td>
                   <td className="p-4 text-right">
-                    <button className="px-3 py-1.5 border border-red-200 text-red-600 text-xs font-bold rounded hover:bg-red-50">Thu hồi (Revoke)</button>
+                    <button 
+                      onClick={() => handleRevoke(cert)}
+                      disabled={cert.status === "revoked"}
+                      className={`px-3 py-1.5 border font-bold rounded text-xs transition-colors ${
+                        cert.status === "revoked" 
+                          ? "border-slate-200 text-slate-400 cursor-not-allowed bg-slate-50" 
+                          : "border-red-200 text-red-600 hover:bg-red-50"
+                      }`}
+                    >
+                      {cert.status === "revoked" ? "Đã thu hồi" : "Thu hồi (Revoke)"}
+                    </button>
                   </td>
                 </tr>
               ))}

@@ -65,3 +65,29 @@ def reject_revocation(serial_number):
             "success": False,
             "message": f"Lỗi hệ thống khi từ chối: {str(e)}"
         }), 500
+
+
+@revoke_bp.route("/direct/<serial_number>", methods=["POST"])
+def revoke_certificate_direct(serial_number):
+    """
+    API Thu hồi trực tiếp chứng chỉ (Admin only)
+    """
+    try:
+        RevocationService.revoke_certificate_by_serial(serial_number)
+        
+        return jsonify({
+            "success": True,
+            "message": f"Chứng chỉ Serial {serial_number} đã được thu hồi trực tiếp thành công."
+        }), 200
+        
+    except ValueError as ve:
+        return jsonify({
+            "success": False,
+            "message": str(ve)
+        }), 400
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": f"Lỗi hệ thống khi thu hồi trực tiếp: {str(e)}"
+        }), 500
