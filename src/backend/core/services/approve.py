@@ -9,13 +9,14 @@ from schema.database_schema import CertificateCreate, CertificateRequest
 from cryptography import x509
 from db.supabase_client import get_supabase_client
 from uuid import UUID
+from core.services.audit_event import normalize_user_id
 
 supabase = get_supabase_client()
 repo = CertificateRepository(supabase)
 
 rsa_service = RSACAService()
 
-def approve_csr(req_id):
+def approve_csr(req_id, actor_id=None):
     db = repo.get_csr_by_id(req_id)
 
     if not db:
@@ -99,12 +100,12 @@ def approve_csr(req_id):
     
     # update DB
     csr_req["status"] = "issued"
-    repo.update_csr_status(csr_req)
-    repo.update_csr_time(csr_req)
+    actor_uuid = normalize_user_id(actor_id)
+    repo.finalize_csr_decision(csr_req, approved_by=actor_uuid)
 
     return serial
 
-def reject_csr(req_id):
+def reject_csr(req_id, actor_id=None):
     db = repo.get_csr_by_id(req_id)
 
     if not db:
@@ -117,7 +118,8 @@ def reject_csr(req_id):
     
     # update DB
     csr_req["status"] = "rejected"
-    repo.update_csr_status(csr_req)
+    actor_uuid = normalize_user_id(actor_id)
+    repo.finalize_csr_decision(csr_req, approved_by=actor_uuid)
 
     return"Rejected"
 

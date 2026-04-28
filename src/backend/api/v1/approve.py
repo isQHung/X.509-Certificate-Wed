@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from core.services.approve import approve_csr,reject_csr,list_pending_csr
 from schema.response import ApproveCSRResponse
+from api.jwt_utils import get_user_id_from_payload
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/v1")
 
@@ -8,7 +9,8 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/v1")
 def approve(id):
 
     try:
-        result = approve_csr(id)
+        actor_id = get_user_id_from_payload()
+        result = approve_csr(id, actor_id=actor_id)
         response = ApproveCSRResponse(message="CSR approved successfully", serial=result)
         return jsonify(response.model_dump()), 200
     except Exception as e:
@@ -18,7 +20,8 @@ def approve(id):
 def reject(id):
 
     try:
-        result = reject_csr(id)
+        actor_id = get_user_id_from_payload()
+        result = reject_csr(id, actor_id=actor_id)
         return jsonify({"message": result}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 400

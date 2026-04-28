@@ -18,7 +18,7 @@ def create_cert_request():
         # Backward compatibility: accept direct csr_pem submissions.
         if data.get("csr_pem"):
             data["user_id"] = data.get("user_id") or user_id
-            result = create_csr(data)
+            result = create_csr(data, actor_id=user_id)
             return jsonify({"message": "CSR created successfully", "request_id": result}), 200
 
         result = generate_csr(data, user_id)
@@ -29,7 +29,8 @@ def create_cert_request():
 @customer_bp.route("/cert_request/<uuid:req_id>/cancel", methods=["POST"])
 def cancel_cert_request(req_id):
     try:
-        res = cancel_csr(req_id)
+        user_id = get_user_id_from_payload()
+        res = cancel_csr(req_id, actor_id=user_id)
         return jsonify({"message": "CSR cancelled successfully", "request_id": res}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 400

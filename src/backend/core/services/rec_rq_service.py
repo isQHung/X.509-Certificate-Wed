@@ -1,4 +1,5 @@
 from db.supabase_client import get_supabase_client
+from core.services.audit_event import normalize_user_id
 
 supabase = get_supabase_client()
 
@@ -6,6 +7,7 @@ class RevocationRequestService:
     
     @staticmethod
     def create_revocation_request(serial_number: str, reason: str, requested_by: str = None) -> bool:
+        actor_id = normalize_user_id(requested_by)
         cert_res = supabase.table("certificates") \
             .select("id, status") \
             .eq("serial_number", serial_number) \
@@ -32,7 +34,7 @@ class RevocationRequestService:
             "certificate_id": cert["id"],
             "reason": reason,
             "status": "pending",
-            "requested_by": None
+            "requested_by": actor_id
         }
         
         supabase.table("revocation_requests").insert(payload).execute()
@@ -43,6 +45,7 @@ class RevocationRequestService:
         """
         Khách hàng chủ động hủy yêu cầu thu hồi chứng chỉ khi đơn vẫn đang chờ duyệt (pending).
         """
+        actor_id = normalize_user_id(requested_by)
         # 1. Tìm đơn yêu cầu thu hồi ĐANG CHỜ DUYỆT (pending) của Serial Number này
         req_res = supabase.table("revocation_requests") \
             .select("id, status, certificates!inner(serial_number)") \

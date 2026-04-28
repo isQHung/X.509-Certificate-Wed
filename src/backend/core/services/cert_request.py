@@ -14,7 +14,7 @@ rsa_service = RSACAService()
 DEFAULT_USER_ID = UUID(int=0)
 
 
-def create_csr(data):
+def create_csr(data, actor_id=None):
     csr_pem = data.get("csr_pem")
     if not csr_pem:
         raise Exception("CSR PEM is required")
@@ -47,7 +47,7 @@ def create_csr(data):
     req_id = repo.insert_csr(csr_req.model_dump(mode='json'))
     return req_id
 
-def cancel_csr(req_id):
+def cancel_csr(req_id, actor_id=None):
     csr = repo.get_csr_by_id(req_id)
     #  Check tồn tại
     if not csr:

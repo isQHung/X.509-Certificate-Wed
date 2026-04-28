@@ -21,8 +21,13 @@ class CertificateRepository:
     def update_csr_status(self, csr_req):
         self.db.table(self.req_table).update({"status": csr_req["status"]}).eq("id", csr_req["id"]).execute()
 
-    def update_csr_time(self, csr_req):
-        self.db.table(self.req_table).update({"approved_at": datetime.now(timezone.utc).isoformat()}).eq("id", csr_req["id"]).execute()
+    def finalize_csr_decision(self, csr_req, approved_by=None):
+        payload = {
+            "status": csr_req["status"],
+            "approved_at": datetime.now(timezone.utc).isoformat(),
+            "approved_by": approved_by,
+        }
+        self.db.table(self.req_table).update(payload).eq("id", csr_req["id"]).execute()
 
     def get_csr(self, status):
         res = self.db.table(self.req_table).select("*").eq("status", status).execute()
