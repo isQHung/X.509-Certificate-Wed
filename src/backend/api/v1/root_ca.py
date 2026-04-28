@@ -4,26 +4,9 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes
 from core.crypto.RSA import RSACAService
 from api.jwt_utils import get_user_id_from_payload
-from core.services.audit_event import normalize_user_id
-from db.supabase_client import get_supabase_client
+from core.services.audit_event import record_audit_event
 
 root_ca_bp = Blueprint('root_ca', __name__, url_prefix='/v1')
-supabase = get_supabase_client()
-
-
-def _insert_root_ca_audit(action: str, actor_id: str | None, metadata: dict | None = None) -> None:
-    payload = {
-        "actor_id": normalize_user_id(actor_id),
-        "action": action,
-        "target_type": "root_ca",
-        "target_id": "system",
-        "metadata": metadata or None,
-    }
-    try:
-        supabase.table("audit_logs").insert(payload).execute()
-    except Exception as exc:
-        # Audit should not break root CA lifecycle operations.
-        print(f"[audit] root_ca action '{action}' failed: {exc}")
 
 @root_ca_bp.route("/root_ca/certificate", methods=["GET"])
 def get_root_certificate():
@@ -77,17 +60,21 @@ def revoke_root_ca():
         deleted = True
         
     if deleted:
-        _insert_root_ca_audit(
-            "REVOKE_ROOT_CA",
+        record_audit_event(
+            "ROOT_CA_REVOKED",
             actor_id,
-            {"key_path": key_path, "cert_path": cert_path},
+            target_type="root_ca",
+            target_id="system",
+            metadata={"key_path": key_path, "cert_path": cert_path},
         )
         return jsonify({"success": True, "message": "Root CA has been revoked."}), 200
     else:
-        _insert_root_ca_audit(
-            "REVOKE_ROOT_CA_NOT_FOUND",
+        record_audit_event(
+            "ROOT_CA_REVOKE_NOT_FOUND",
             actor_id,
-            {"key_path": key_path, "cert_path": cert_path},
+            target_type="root_ca",
+            target_id="system",
+            metadata={"key_path": key_path, "cert_path": cert_path},
         )
         return jsonify({"success": False, "message": "Root CA not found."}), 404
 
@@ -100,10 +87,12 @@ def generate_root_ca():
     cert_path = os.getenv("CERT_PATH_CA", "ca_cert.pem")
     
     if os.path.exists(cert_path) and os.path.exists(key_path):
-        _insert_root_ca_audit(
-            "GENERATE_ROOT_CA_SKIPPED_EXISTS",
+        record_audit_event(
+            "ROOT_CA_CREATE_SKIPPED_EXISTS",
             actor_id,
-            {"key_path": key_path, "cert_path": cert_path},
+            target_type="root_ca",
+            target_id="system",
+            metadata={"key_path": key_path, "cert_path": cert_path},
         )
         return jsonify({"success": False, "message": "Root CA already exists."}), 400
         
@@ -120,10 +109,12 @@ def generate_root_ca():
         with open(cert_path, "wb") as f:
             f.write(rsa_service.serialize_cert(cert))
 
-        _insert_root_ca_audit(
-            "GENERATE_ROOT_CA",
+        record_audit_event(
+            "ROOT_CA_CREATED",
             actor_id,
-            {
+            target_type="root_ca",
+            target_id="system",
+            metadata={
                 "key_path": key_path,
                 "cert_path": cert_path,
                 "common_name": common_name,
@@ -133,9 +124,11 @@ def generate_root_ca():
             
         return jsonify({"success": True, "message": "Khởi tạo Root CA từ ENV thành công."}), 201
     except Exception as e:
-        _insert_root_ca_audit(
-            "GENERATE_ROOT_CA_FAILED",
+        record_audit_event(
+            "ROOT_CA_CREATE_FAILED",
             actor_id,
-            {"error": str(e), "key_path": key_path, "cert_path": cert_path},
+            target_type="root_ca",
+            target_id="system",
+            metadata={"error": str(e), "key_path": key_path, "cert_path": cert_path},
         )
         return jsonify({"success": False, "message": str(e)}), 500

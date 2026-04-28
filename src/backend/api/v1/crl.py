@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify
 
+from api.jwt_utils import get_user_id_from_payload
 from core.services.crl import CrlService
 
 crl_bp = Blueprint("crl", __name__, url_prefix="/v1")
@@ -8,7 +9,8 @@ crl_bp = Blueprint("crl", __name__, url_prefix="/v1")
 @crl_bp.route("/crl", methods=["GET"])
 def generate_crl():
     try:
-        result = CrlService().generate_crl()
+        actor_id = get_user_id_from_payload()
+        result = CrlService().generate_crl(actor_id=actor_id)
         return jsonify(result.model_dump(mode="json")), 200
     except ValueError as e:
         return jsonify({"error": str(e)}), 400

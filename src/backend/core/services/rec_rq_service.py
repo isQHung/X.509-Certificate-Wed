@@ -1,5 +1,5 @@
 from db.supabase_client import get_supabase_client
-from core.services.audit_event import normalize_user_id
+from core.services.audit_event import normalize_user_id, record_audit_event
 
 supabase = get_supabase_client()
 
@@ -38,6 +38,19 @@ class RevocationRequestService:
         }
         
         supabase.table("revocation_requests").insert(payload).execute()
+
+        record_audit_event(
+            "REVOCATION_REQUEST_CREATED",
+            requested_by,
+            target_type="revocation_request",
+            target_id=str(cert["id"]),
+            metadata={
+                "serial_number": serial_number,
+                "certificate_id": str(cert["id"]),
+                "reason": reason,
+                "status": "pending",
+            },
+        )
         
         return True
     @staticmethod
@@ -60,4 +73,15 @@ class RevocationRequestService:
 
 
         supabase.table("revocation_requests").delete().eq("id", request_id).execute()
+
+        record_audit_event(
+            "REVOCATION_REQUEST_CANCELED",
+            requested_by,
+            target_type="revocation_request",
+            target_id=str(request_id),
+            metadata={
+                "serial_number": serial_number,
+                "status": "deleted",
+            },
+        )
         return True

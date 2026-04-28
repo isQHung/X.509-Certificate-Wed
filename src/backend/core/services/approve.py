@@ -9,7 +9,7 @@ from schema.database_schema import CertificateCreate, CertificateRequest
 from cryptography import x509
 from db.supabase_client import get_supabase_client
 from uuid import UUID
-from core.services.audit_event import normalize_user_id
+from core.services.audit_event import normalize_user_id, record_audit_event
 
 supabase = get_supabase_client()
 repo = CertificateRepository(supabase)
@@ -103,6 +103,19 @@ def approve_csr(req_id, actor_id=None):
     actor_uuid = normalize_user_id(actor_id)
     repo.finalize_csr_decision(csr_req, approved_by=actor_uuid)
 
+    record_audit_event(
+        "CSR_APPROVED",
+        actor_id,
+        target_type="csr",
+        target_id=str(csr_req["id"]),
+        metadata={
+            "request_status": "pending",
+            "result_status": "issued",
+            "serial_number": serial,
+            "subject": subject,
+        },
+    )
+
     return serial
 
 def reject_csr(req_id, actor_id=None):
@@ -121,7 +134,19 @@ def reject_csr(req_id, actor_id=None):
     actor_uuid = normalize_user_id(actor_id)
     repo.finalize_csr_decision(csr_req, approved_by=actor_uuid)
 
-    return"Rejected"
+    record_audit_event(
+        "CSR_REJECTED",
+        actor_id,
+        target_type="csr",
+        target_id=str(csr_req["id"]),
+        metadata={
+            "request_status": "pending",
+            "result_status": "rejected",
+            "subject": csr_req.get("subject"),
+        },
+    )
+
+    return "Rejected"
 
 def list_pending_csr():
     db_records= repo.get_csr(status="pending")

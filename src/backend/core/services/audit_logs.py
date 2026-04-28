@@ -45,6 +45,23 @@ class AuditLogService:
             total = len(res.data or [])
 
         rows = res.data or []
+        
+        # Batch fetch user data for actor_name enrichment
+        actor_ids = set()
+        for row in rows:
+            if row.get("actor_id"):
+                actor_ids.add(str(row["actor_id"]))
+        
+        # Query users table to get email for each actor_id
+        user_map = {}
+        if actor_ids:
+            try:
+                users_query = self.supabase.table("users").select("id, email").in_("id", list(actor_ids)).execute()
+                for user in users_query.data or []:
+                    user_map[str(user.get("id"))] = user.get("email")
+            except Exception as e:
+                print(f"Error fetching users for audit logs: {e}")
+        
         # Return raw rows from PostgREST to avoid strict model parsing issues
         # with JSONB fields and keep API response stable.
         data = []
@@ -53,6 +70,10 @@ class AuditLogService:
             actor_id = normalized.get("actor_id")
             if actor_id is not None:
                 normalized["actor_id"] = str(actor_id)
+            
+            # Add actor_name (email) from user_map
+            actor_id_str = str(actor_id) if actor_id else None
+            normalized["actor_name"] = user_map.get(actor_id_str) if actor_id_str else None
             data.append(normalized)
         
         return PaginatedResponse(
