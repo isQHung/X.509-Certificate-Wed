@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Optional, List, Any, Dict
 from uuid import UUID
 from enum import Enum
+import json
 from pydantic import BaseModel, Field, field_validator
 from pydantic.types import Json
 
@@ -86,8 +87,46 @@ class UserRole(BaseModel):
 class CertificateRequestBase(BaseModel):
     user_id: UUID = Field(..., description="ID of the user sending the CSR")
     csr_pem: str = Field(..., description="Certificate Signing Request in PEM format")
-    subject: Optional[Json] = Field(default=None, description="Certificate subject as JSON")
-    san: Optional[Json] = Field(default=None, description="Subject Alternative Names as JSON")
+    subject: Optional[Dict[str, Any]] = Field(default=None, description="Certificate subject as object")
+    san: Optional[List[Any]] = Field(default=None, description="Subject Alternative Names as list")
+    alias: Optional[str] = Field(default=None, description="User key alias")
+    key_algorithm: str = Field(default="RSA", description="Requested key algorithm")
+    key_size: int = Field(default=2048, description="Requested key size")
+    validity_days: int = Field(default=365, description="Requested certificate validity in days")
+
+    @field_validator("subject", mode="before")
+    @classmethod
+    def normalize_subject(cls, value: Any):
+        if value is None:
+            return None
+        if isinstance(value, str):
+            value = json.loads(value)
+        if isinstance(value, dict):
+            return value
+        if isinstance(value, list):
+            return {"values": value}
+        raise ValueError("subject must be a JSON object")
+
+    @field_validator("san", mode="before")
+    @classmethod
+    def normalize_san(cls, value: Any):
+        if value is None:
+            return None
+        if isinstance(value, str):
+            value = json.loads(value)
+        if isinstance(value, list):
+            return value
+        if isinstance(value, tuple) or isinstance(value, set):
+            return list(value)
+        if isinstance(value, dict):
+            if not value:
+                return []
+            if len(value) == 1:
+                only_value = next(iter(value.values()))
+                if isinstance(only_value, list):
+                    return only_value
+            return [value]
+        raise ValueError("san must be a JSON list")
 
 
 class CertificateRequestCreate(CertificateRequestBase):
@@ -115,14 +154,48 @@ class CertificateRequest(CertificateRequestBase):
 class CertificateBase(BaseModel):
     serial_number: str = Field(..., description="Unique certificate serial number")
     issuer_id: Optional[UUID] = Field(default=None, description="Issuer certificate ID (null for root CA)")
-    subject: Optional[Json] = Field(default=None, description="Certificate subject as JSON")
-    san: Optional[Json] = Field(default=None, description="Subject Alternative Names as JSON")
+    subject: Optional[Dict[str, Any]] = Field(default=None, description="Certificate subject as object")
+    san: Optional[List[Any]] = Field(default=None, description="Subject Alternative Names as list")
     public_key: str = Field(..., description="Public key in PEM format")
     valid_from: Optional[datetime] = None
     valid_to: Optional[datetime] = None
     status: CertificateStatus = Field(default=CertificateStatus.ACTIVE)
     certificate_pem: str = Field(..., description="Certificate in PEM format")
     csr_id: Optional[UUID] = None
+
+    @field_validator("subject", mode="before")
+    @classmethod
+    def normalize_subject(cls, value: Any):
+        if value is None:
+            return None
+        if isinstance(value, str):
+            value = json.loads(value)
+        if isinstance(value, dict):
+            return value
+        if isinstance(value, list):
+            return {"values": value}
+        raise ValueError("subject must be a JSON object")
+
+    @field_validator("san", mode="before")
+    @classmethod
+    def normalize_san(cls, value: Any):
+        if value is None:
+            return None
+        if isinstance(value, str):
+            value = json.loads(value)
+        if isinstance(value, list):
+            return value
+        if isinstance(value, tuple) or isinstance(value, set):
+            return list(value)
+        if isinstance(value, dict):
+            if not value:
+                return []
+            if len(value) == 1:
+                only_value = next(iter(value.values()))
+                if isinstance(only_value, list):
+                    return only_value
+            return [value]
+        raise ValueError("san must be a JSON list")
 
 
 class CertificateCreate(CertificateBase):
@@ -386,12 +459,6 @@ class PaginatedResponse(BaseModel):
     page: int
     limit: int
     total_pages: int
-
-    @field_validator('total_pages')
-    def calculate_total_pages(cls, v, values):
-        if 'total' in values and 'limit' in values:
-            return (values['total'] + values['limit'] - 1) // values['limit']
-        return v
 
 
 # ============================================

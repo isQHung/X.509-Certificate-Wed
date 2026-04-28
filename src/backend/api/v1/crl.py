@@ -25,3 +25,10 @@ def get_latest_crl():
         return jsonify(crl.model_dump(mode="json")), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+@crl_bp.route("/crl/revocations", methods=["GET"])
+def list_recent_revocations():
+    try:
+        revs = CrlService().get_recent_revocations()
+        return jsonify([r.model_dump(mode="json") for r in revs]), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

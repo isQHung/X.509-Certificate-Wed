@@ -4,11 +4,13 @@ from .v1.user_revoke import user_revoke_bp
 from .v1.admin_revoke import revoke_bp
 from .v1.approve import admin_bp
 from .v1.cert_request import customer_bp
+from .v1.certificates import certificates_bp
 from .v1.crl import crl_bp
 from .v1.audit_logs import audit_logs_bp
 from .middleware import jwt_middleware
 from .v1.certificate_inspector import certificate_bp
-from .v1.csr_generator import csr_generator_bp
+from .v1.key_generator import key_generator_bp
+from .v1.root_ca import root_ca_bp
 
 routes = Blueprint('routes', __name__, url_prefix='/api')
 
@@ -17,7 +19,8 @@ ADMIN_ONLY_BLUEPRINTS = [
     'admin_revoke',        
     'system_config',  
     'audit_logs',
-    'crl'      
+    'crl',
+    'root_ca'
 ]
 
 @routes.before_request
@@ -51,6 +54,9 @@ routes.register_blueprint(admin_bp)
 routes.register_blueprint(revoke_bp)
 routes.register_blueprint(user_revoke_bp)
 routes.register_blueprint(customer_bp)
+routes.register_blueprint(certificates_bp)
 routes.register_blueprint(certificate_bp)
 routes.register_blueprint(crl_bp)
 routes.register_blueprint(audit_logs_bp)
+routes.register_blueprint(key_generator_bp)
+routes.register_blueprint(root_ca_bp)

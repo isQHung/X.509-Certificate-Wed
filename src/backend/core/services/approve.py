@@ -6,9 +6,9 @@ from cryptography.hazmat.primitives import serialization
 import os
 from core.crypto.cert_signer import CertSigner
 from schema.database_schema import CertificateCreate, CertificateRequest
-import json
 from cryptography import x509
 from db.supabase_client import get_supabase_client
+from uuid import UUID
 
 supabase = get_supabase_client()
 repo = CertificateRepository(supabase)
@@ -20,9 +20,7 @@ def approve_csr(req_id):
 
     if not db:
         raise Exception("CSR not found")
-    
-    db["subject"] = json.dumps(db["subject"])
-    db["san"] = json.dumps(db["san"])
+
     csr_req = CertificateRequest(**db).model_dump(mode='json')
 
     if csr_req["status"] != "pending":
@@ -45,12 +43,19 @@ def approve_csr(req_id):
     )
 
     signer = CertSigner(ca_cert,ca_priv_key)
+
+    validity_days = csr_req.get("validity_days") or 365
+    try:
+        validity_days = int(validity_days)
+    except (TypeError, ValueError) as exc:
+        raise Exception("Invalid validity_days in certificate request") from exc
+    if validity_days < 1 or validity_days > 3650:
+        raise Exception("validity_days must be between 1 and 3650")
     
     # ký
     cert = signer.sign_csr(
         csr_pem=csr_req["csr_pem"].encode(),
-        # ca_private_key=ca_priv_key,
-        # ca_cert=ca_cert
+        validity_days=validity_days,
     )
 
     cert = x509.load_pem_x509_certificate(cert)
@@ -58,20 +63,28 @@ def approve_csr(req_id):
     serial = str(cert.serial_number)
     
     subject = csr_req["subject"]
-    san = csr_req["san"]  
-    if isinstance(subject, dict):
-        subject = json.dumps(subject)
-    if isinstance(san, (dict, list)):
-        san = json.dumps(san)
+    san = csr_req["san"]
     
     public_key = cert.public_key().public_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PublicFormat.SubjectPublicKeyInfo
     ).decode()
 
+    issuer_env = os.getenv("ISSUER_CA")
+    issuer_id = None
+    if issuer_env:
+        try:
+            parsed_id = UUID(issuer_env)
+            # check if it exists in DB
+            check = supabase.table("certificates").select("id").eq("id", str(parsed_id)).execute()
+            if check.data:
+                issuer_id = parsed_id
+        except ValueError:
+            pass
+
     cert_data = CertificateCreate(
         serial_number=str(cert.serial_number),
-        issuer_id=os.getenv("ISSUER_CA"),
+        issuer_id=issuer_id,
         subject=subject,
         san=san,
         public_key=public_key,
@@ -97,8 +110,6 @@ def reject_csr(req_id):
     if not db:
         raise Exception("CSR not found")
 
-    db["subject"] = json.dumps(db["subject"])
-    db["san"] = json.dumps(db["san"])
     csr_req = CertificateRequest(**db).model_dump()
     
     if csr_req["status"] != "pending":
@@ -114,7 +125,5 @@ def list_pending_csr():
     db_records= repo.get_csr(status="pending")
     res = []
     for item in db_records:
-        item["subject"] = json.dumps(item["subject"])
-        item["san"] = json.dumps(item["san"])
         res.append(CertificateRequest(**item))
     return res

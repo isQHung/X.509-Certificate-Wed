@@ -11,7 +11,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from core.crypto.RSA import RSACAService
 from core.repository.crl import CrlRepository
 from db.supabase_client import get_supabase_client
-from schema.database_schema import CRL, CRLCreate, CRLEntryCreate, Revocation
+from schema.database_schema import CRL, CRLCreate, CRLEntry, CRLEntryCreate, Revocation
 from schema.response import GenerateCrlResponse
 
 
@@ -92,10 +92,14 @@ class CrlService:
         self._rsa = RSACAService()
 
     def generate_crl(self) -> GenerateCrlResponse:
-        key_path = os.getenv("KEY_PATH_CA")
-        cert_path = os.getenv("CERT_PATH_CA")
+        key_path = os.getenv("KEY_PATH_CA", "ca_key.pem")
+        cert_path = os.getenv("CERT_PATH_CA", "ca_cert.pem")
+        
         if not key_path or not cert_path:
             raise ValueError("KEY_PATH_CA và CERT_PATH_CA phải được cấu hình")
+
+        if not os.path.exists(key_path) or not os.path.exists(cert_path):
+            raise ValueError(f"Không tìm thấy tệp Root CA tại: {key_path} hoặc {cert_path}. Vui lòng kiểm tra lại cấu hình ENV.")
 
         next_days = int(os.getenv("CRL_NEXT_UPDATE_DAYS", "1"))
 
@@ -107,6 +111,39 @@ class CrlService:
         pending = [Revocation.model_validate(row) for row in pending_raw]
         new_crl_id = uuid4()
 
+        # Build list of all entries (existing + pending) for the new CRL PEM
+        existing_entries = self._repo.list_all_crl_entries()
+        
+        # temporary entries for PEM building
+        pem_entries = list(existing_entries)
+        for p in pending:
+            pem_entries.append({
+                "serial_number": p.serial_number,
+                "revoked_at": p.revoked_at
+            })
+            
+        deduped = _dedupe_entries_by_serial(pem_entries)
+        crl_pem = _build_crl_pem(
+            ca_cert,
+            ca_private_key,
+            deduped,
+            next_update_days=next_days,
+        )
+
+        now = datetime.now(timezone.utc)
+        next_up = now + timedelta(days=next_days)
+        crl_create = CRLCreate(
+            version=1,
+            generated_at=now,
+            next_update=next_up,
+            crl_pem=crl_pem,
+        )
+        
+        # 1. Insert CRL header FIRST (to avoid FK issues)
+        crl_row = {"id": str(new_crl_id), **crl_create.model_dump(mode="json")}
+        crl_saved = self._repo.insert_crl(crl_row)
+
+        # 2. Insert new entries associated with this CRL
         if pending:
             to_insert: List[dict[str, Any]] = []
             revocation_ids: List[str] = []
@@ -124,26 +161,17 @@ class CrlService:
             self._repo.insert_crl_entries_many(to_insert)
             self._repo.delete_revocations_by_ids(revocation_ids)
 
-        all_entries = _dedupe_entries_by_serial(self._repo.list_all_crl_entries())
-        crl_pem = _build_crl_pem(
-            ca_cert,
-            ca_private_key,
-            all_entries,
-            next_update_days=next_days,
-        )
-
-        now = datetime.now(timezone.utc)
-        next_up = now + timedelta(days=next_days)
-        crl_create = CRLCreate(
-            version=1,
-            generated_at=now,
-            next_update=next_up,
-            crl_pem=crl_pem,
-        )
-        crl_row = {"id": str(new_crl_id), **crl_create.model_dump(mode="json")}
-        crl_saved = self._repo.insert_crl(crl_row)
-
         return GenerateCrlResponse(crl=crl_saved, revocations_moved=len(pending))
 
     def get_latest_crl(self) -> Optional[CRL]:
         return self._repo.get_latest_crl()
+    def get_recent_revocations(self, limit: int = 20) -> List[CRLEntry]:
+        rows = self._repo.list_recent_crl_entries(limit)
+        results = []
+        for row in rows:
+            try:
+                results.append(CRLEntry.model_validate(row))
+            except Exception as e:
+                # Log and skip invalid records instead of crashing the whole request
+                print(f"Error validating CRL Entry {row.get('id')}: {e}")
+        return results

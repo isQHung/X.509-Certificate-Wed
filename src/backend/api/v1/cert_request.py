@@ -8,22 +8,20 @@ customer_bp = Blueprint("customer", __name__, url_prefix="/v1")
 def create_cert_request():
     try:
         data = request.get_json()
-        result = create_csr(data)
-        return jsonify({"message": "CSR created successfully", "request_id": result}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        if not isinstance(data, dict):
+            return jsonify({"error": "Invalid JSON payload"}), 400
 
-@customer_bp.route("/cert_request/generate", methods=["POST"])
-def generate_cert_request():
-    try:
-        data = request.get_json()
-        user_id = data.get("userId")
-        alias = data.get("alias", "").strip()
+        user_id = get_user_id_from_payload()
         if not user_id:
-            print("DEBUG: Không tìm thấy UserID trong cả Body lẫn Cookie")
             return jsonify({"error": "Unauthorized: Missing User ID"}), 401
-        result = generate_csr(data, user_id, alias)
-        
+
+        # Backward compatibility: accept direct csr_pem submissions.
+        if data.get("csr_pem"):
+            data["user_id"] = data.get("user_id") or user_id
+            result = create_csr(data)
+            return jsonify({"message": "CSR created successfully", "request_id": result}), 200
+
+        result = generate_csr(data, user_id)
         return jsonify(result), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 400

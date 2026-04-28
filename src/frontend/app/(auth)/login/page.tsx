@@ -115,7 +115,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="relative my-4">
+          {/* <div className="relative my-4">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t border-slate-100"></span>
             </div>
@@ -124,10 +124,10 @@ export default function LoginPage() {
                 Hoặc
               </span>
             </div>
-          </div>
+          </div> */}
 
           {/* Social Login */}
-          <button
+          {/* <button
             type="button"
             onClick={handleGoogleLogin}
             className="w-full flex items-center justify-center gap-3 py-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all"
@@ -151,7 +151,7 @@ export default function LoginPage() {
               />
             </svg>
             Đăng nhập bằng Google
-          </button>
+          </button> */}
 
           {/* Footer Link */}
           <p className="mt-8 text-center text-sm text-slate-500 font-medium">
