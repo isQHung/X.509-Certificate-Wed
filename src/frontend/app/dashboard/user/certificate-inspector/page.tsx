@@ -19,6 +19,11 @@ interface CertificateInfo {
     value: unknown;
   }>;
   public_key_type: string;
+  ca_validation?: {
+    issued_by_system_ca: boolean;
+    check_status: "ok" | "unavailable";
+    message: string;
+  };
 }
 
 export default function CertificateInspectorPage() {
@@ -51,7 +56,14 @@ export default function CertificateInspectorPage() {
       }
 
       const data = await response.json();
-      setCertificateInfo(data);
+      setCertificateInfo({
+        ...data,
+        ca_validation: data.ca_validation ?? {
+          issued_by_system_ca: false,
+          check_status: "unavailable",
+          message: "Khong nhan duoc ket qua xac thuc tu he thong",
+        },
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error occurred");
       setCertificateInfo(null);

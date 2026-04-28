@@ -52,6 +52,12 @@ class CertificateExtensionResponse(BaseModel):
     value: Any = Field(..., description="Extension value")
 
 
+class CertificateCaValidationResponse(BaseModel):
+    issued_by_system_ca: bool = Field(..., description="Whether certificate issuer matches configured system CA")
+    check_status: str = Field(..., description="Validation status: ok or unavailable")
+    message: str = Field(..., description="Human-readable validation result")
+
+
 class CertificateInspectResponse(BaseModel):
     serial: str = Field(..., description="Certificate serial number")
     subject: Dict[str, str] = Field(..., description="Certificate subject distinguished name")
@@ -59,4 +65,5 @@ class CertificateInspectResponse(BaseModel):
     validity: CertificateValidityResponse = Field(..., description="Certificate validity period")
     extensions: List[CertificateExtensionResponse] = Field(..., description="Certificate extensions")
     public_key_type: str = Field(..., description="Public key algorithm type")
+    ca_validation: CertificateCaValidationResponse = Field(..., description="Certificate issuer validation against system CA")
 

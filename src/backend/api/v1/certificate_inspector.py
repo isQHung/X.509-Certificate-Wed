@@ -6,8 +6,6 @@ Handles certificate file uploads and inspection
 from flask import Blueprint, request, jsonify
 from core.services.certificate_inspector import CertificateInspector
 from schema.response import CertificateInspectResponse
-from werkzeug.utils import secure_filename
-import os
 
 certificate_bp = Blueprint("certificate_inspector", __name__, url_prefix="/v1")
 

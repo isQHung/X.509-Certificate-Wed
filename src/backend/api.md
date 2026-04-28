@@ -520,7 +520,12 @@ curl -X POST http://localhost:5000/api/v1/certificate/inspect \
       ]
     }
   ],
-  "public_key_type": "RSAPublicKey"
+  "public_key_type": "RSAPublicKey",
+  "ca_validation": {
+    "issued_by_system_ca": false,
+    "check_status": "ok",
+    "message": "Certificate is not signed by system CA"
+  }
 }
 ```
 
