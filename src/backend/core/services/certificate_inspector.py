@@ -4,10 +4,19 @@ Parses X.509 certificates and extracts relevant information
 """
 
 from cryptography import x509
-from cryptography.x509.oid import ExtensionOID, NameOID
+from cryptography.x509.oid import ExtensionOID
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives.asymmetric import (
+    dsa,
+    ec,
+    ed25519,
+    ed448,
+    padding,
+    rsa,
+)
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional
-import json
+from typing import Dict, Any, List
+import os
 
 
 class CertificateInspector:
@@ -26,9 +35,17 @@ class CertificateInspector:
         try:
             if isinstance(certificate_pem, str):
                 certificate_pem = certificate_pem.encode()
-            self.certificate = x509.load_pem_x509_certificate(certificate_pem)
+            self.certificate = self._load_certificate(certificate_pem)
         except Exception as e:
             raise ValueError(f"Invalid certificate format: {e}")
+
+    @staticmethod
+    def _load_certificate(certificate_bytes: bytes) -> x509.Certificate:
+        """Load certificate bytes in either PEM or DER format."""
+        try:
+            return x509.load_pem_x509_certificate(certificate_bytes)
+        except Exception:
+            return x509.load_der_x509_certificate(certificate_bytes)
     
     def extract_subject(self) -> Dict[str, str]:
         """Extract subject distinguished name"""
@@ -208,6 +225,100 @@ class CertificateInspector:
             pass
         
         return extensions_list
+
+    def validate_issuer_against_system_ca(self) -> Dict[str, Any]:
+        """Check whether current certificate is signed by configured system CA."""
+        cert_path = os.getenv("CERT_PATH_CA", "ca_cert.pem")
+
+        if not cert_path:
+            return {
+                "issued_by_system_ca": False,
+                "check_status": "unavailable",
+                "message": "System CA certificate path is not configured",
+            }
+
+        if not os.path.exists(cert_path):
+            return {
+                "issued_by_system_ca": False,
+                "check_status": "unavailable",
+                "message": "System CA certificate is not available",
+            }
+
+        try:
+            with open(cert_path, "rb") as cert_file:
+                ca_cert_bytes = cert_file.read()
+
+            ca_certificate = self._load_certificate(ca_cert_bytes)
+            issuer_name_matches = self.certificate.issuer == ca_certificate.subject
+            signature_verified = self._verify_signature_with_issuer_public_key(
+                issuer_certificate=ca_certificate
+            )
+            issued_by_system_ca = issuer_name_matches and signature_verified
+
+            return {
+                "issued_by_system_ca": issued_by_system_ca,
+                "check_status": "ok",
+                "message": (
+                    "Certificate signature verified by system CA"
+                    if issued_by_system_ca
+                    else "Certificate is not signed by system CA"
+                ),
+            }
+        except Exception as exc:
+            return {
+                "issued_by_system_ca": False,
+                "check_status": "unavailable",
+                "message": f"Unable to validate against system CA: {exc}",
+            }
+
+    def _verify_signature_with_issuer_public_key(
+        self,
+        issuer_certificate: x509.Certificate,
+    ) -> bool:
+        """Verify certificate signature bytes with issuer certificate public key."""
+        issuer_public_key = issuer_certificate.public_key()
+
+        try:
+            if isinstance(issuer_public_key, rsa.RSAPublicKey):
+                issuer_public_key.verify(
+                    self.certificate.signature,
+                    self.certificate.tbs_certificate_bytes,
+                    padding.PKCS1v15(),
+                    self.certificate.signature_hash_algorithm,
+                )
+                return True
+
+            if isinstance(issuer_public_key, ec.EllipticCurvePublicKey):
+                issuer_public_key.verify(
+                    self.certificate.signature,
+                    self.certificate.tbs_certificate_bytes,
+                    ec.ECDSA(self.certificate.signature_hash_algorithm),
+                )
+                return True
+
+            if isinstance(issuer_public_key, dsa.DSAPublicKey):
+                issuer_public_key.verify(
+                    self.certificate.signature,
+                    self.certificate.tbs_certificate_bytes,
+                    self.certificate.signature_hash_algorithm,
+                )
+                return True
+
+            if isinstance(
+                issuer_public_key,
+                (ed25519.Ed25519PublicKey, ed448.Ed448PublicKey),
+            ):
+                issuer_public_key.verify(
+                    self.certificate.signature,
+                    self.certificate.tbs_certificate_bytes,
+                )
+                return True
+
+            return False
+        except InvalidSignature:
+            return False
+        except Exception:
+            return False
     
     def inspect(self) -> Dict[str, Any]:
         """
@@ -222,5 +333,6 @@ class CertificateInspector:
             "issuer": self.extract_issuer(),
             "validity": self.extract_validity(),
             "extensions": self.extract_extensions(),
-            "public_key_type": str(self.certificate.public_key().__class__.__name__)
+            "public_key_type": str(self.certificate.public_key().__class__.__name__),
+            "ca_validation": self.validate_issuer_against_system_ca(),
         }

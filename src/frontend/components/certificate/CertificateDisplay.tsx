@@ -19,6 +19,11 @@ interface CertificateInfo {
   validity: CertificateValidity;
   extensions: CertificateExtension[];
   public_key_type: string;
+  ca_validation?: {
+    issued_by_system_ca: boolean;
+    check_status: "ok" | "unavailable";
+    message: string;
+  };
 }
 
 interface CertificateDisplayProps {
@@ -82,35 +87,36 @@ function ExtensionDisplay({ extension }: { extension: CertificateExtension }) {
 export default function CertificateDisplay({
   certificate,
 }: CertificateDisplayProps) {
+  const caValidation = certificate.ca_validation;
+  const isVerifiedBySystem = caValidation?.issued_by_system_ca === true;
+
   return (
     <div className="space-y-6">
       {/* Status Banner */}
       <div
         className={`rounded-2xl p-6 ${
-          certificate.validity.is_valid
+          isVerifiedBySystem
             ? "bg-green-50 border border-green-200"
-            : "bg-red-50 border border-red-200"
+            : "bg-rose-50 border border-rose-200"
         }`}
       >
         <h3
           className={`font-semibold text-lg ${
-            certificate.validity.is_valid ? "text-green-700" : "text-red-700"
+            isVerifiedBySystem ? "text-green-700" : "text-rose-700"
           }`}
         >
-          {certificate.validity.is_valid
-            ? "✓ Chứng chỉ hợp lệ"
-            : "✗ Chứng chỉ không hợp lệ"}
+          {isVerifiedBySystem
+            ? "✓ Chứng chỉ đã được xác thực bởi hệ thống"
+            : "✗ Chứng chỉ không được xác thực bởi hệ thống"}
         </h3>
         <p
           className={`text-sm mt-1 ${
-            certificate.validity.is_valid ? "text-green-600" : "text-red-600"
+            isVerifiedBySystem ? "text-green-600" : "text-rose-600"
           }`}
         >
-          {certificate.validity.is_valid
-            ? `Chứng chỉ này hợp lệ từ ${formatDate(certificate.validity.not_before)} đến ${formatDate(
-                certificate.validity.not_after,
-              )}.`
-            : `Chứng chỉ không hợp lệ. Ngày hiệu lực: ${formatDate(certificate.validity.not_before)} - ${formatDate(certificate.validity.not_after)}`}
+          {isVerifiedBySystem
+            ? "Chữ ký chứng chỉ đã được xác minh bằng CA của hệ thống."
+            : "Chữ ký chứng chỉ không được xác minh bằng CA của hệ thống."}
         </p>
       </div>
 
@@ -136,6 +142,24 @@ export default function CertificateDisplay({
           Nhà phát hành (Issuer)
         </h3>
         <DNDisplay dn={certificate.issuer} />
+
+        <div className="mt-4">
+          <span
+            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
+              isVerifiedBySystem
+                ? "bg-green-100 text-green-800"
+                : "bg-rose-100 text-rose-800"
+            }`}
+            title={caValidation?.message || "Khong co thong tin xac thuc"}
+          >
+            {isVerifiedBySystem
+              ? "Da xac thuc boi he thong"
+              : "Khong duoc xac thuc boi he thong"}
+          </span>
+          {caValidation?.message && (
+            <p className="mt-2 text-xs text-slate-500">{caValidation.message}</p>
+          )}
+          </div>
       </div>
 
       {/* Validity */}
