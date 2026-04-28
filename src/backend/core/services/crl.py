@@ -11,6 +11,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from core.crypto.RSA import RSACAService
 from core.repository.crl import CrlRepository
 from db.supabase_client import get_supabase_client
+from core.services.audit_event import record_audit_event
 from schema.database_schema import CRL, CRLCreate, CRLEntry, CRLEntryCreate, Revocation
 from schema.response import GenerateCrlResponse
 
@@ -91,7 +92,7 @@ class CrlService:
         self._repo = repo or CrlRepository(get_supabase_client())
         self._rsa = RSACAService()
 
-    def generate_crl(self) -> GenerateCrlResponse:
+    def generate_crl(self, actor_id: str | None = None) -> GenerateCrlResponse:
         key_path = os.getenv("KEY_PATH_CA", "ca_key.pem")
         cert_path = os.getenv("CERT_PATH_CA", "ca_cert.pem")
         
@@ -160,6 +161,19 @@ class CrlService:
                 )
             self._repo.insert_crl_entries_many(to_insert)
             self._repo.delete_revocations_by_ids(revocation_ids)
+
+        record_audit_event(
+            "CRL_CREATED",
+            actor_id,
+            target_type="crl",
+            target_id=str(new_crl_id),
+            metadata={
+                "crl_id": str(new_crl_id),
+                "revocations_moved": len(pending),
+                "next_update": next_up.isoformat(),
+                "generated_at": now.isoformat(),
+            },
+        )
 
         return GenerateCrlResponse(crl=crl_saved, revocations_moved=len(pending))
 

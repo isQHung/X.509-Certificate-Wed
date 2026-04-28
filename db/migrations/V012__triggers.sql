@@ -18,35 +18,3 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-
-CREATE TRIGGER audit_certificates
-AFTER INSERT OR UPDATE ON certificates
-FOR EACH ROW EXECUTE FUNCTION log_audit();
-
-CREATE TRIGGER audit_crl
-AFTER INSERT OR UPDATE ON crl
-FOR EACH ROW EXECUTE FUNCTION log_audit();
-
-CREATE TRIGGER audit_revocations
-AFTER INSERT OR UPDATE ON revocations
-FOR EACH ROW EXECUTE FUNCTION log_audit();
-
-CREATE TRIGGER audit_revocation_requests
-AFTER INSERT OR UPDATE ON revocation_requests
-FOR EACH ROW EXECUTE FUNCTION log_audit();
-
-CREATE TRIGGER audit_system_configs
-AFTER INSERT OR UPDATE ON system_configs
-FOR EACH ROW EXECUTE FUNCTION log_audit();
-
-CREATE TRIGGER audit_users
-AFTER INSERT OR UPDATE ON users
-FOR EACH ROW EXECUTE FUNCTION log_audit();
-
-CREATE TRIGGER audit_certificate_requests
-AFTER INSERT OR UPDATE ON certificate_requests
-FOR EACH ROW EXECUTE FUNCTION log_audit();
-
-CREATE TRIGGER audit_key_pairs
-AFTER INSERT OR UPDATE ON key_pairs
-FOR EACH ROW EXECUTE FUNCTION log_audit();

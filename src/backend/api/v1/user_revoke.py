@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from core.services.rec_rq_service import RevocationRequestService
+from api.jwt_utils import get_user_id_from_payload
 
 user_revoke_bp = Blueprint('user_revoke', __name__, url_prefix='/v1/user/revoke')
 
@@ -21,7 +22,7 @@ def submit_revoke_request(serial_number):
 
         reason = data.get("reason")
 
-        requested_by = None 
+        requested_by = get_user_id_from_payload()
 
         RevocationRequestService.create_revocation_request(
             serial_number=serial_number, 
@@ -52,7 +53,7 @@ def cancel_revoke_request(serial_number):
     Đường dẫn: POST /api/v1/user/revoke/{serial_number}/cancel
     """
     try:
-        requested_by = None
+        requested_by = get_user_id_from_payload()
 
         RevocationRequestService.cancel_revocation_request(
             serial_number=serial_number,

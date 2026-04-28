@@ -3,6 +3,8 @@ import os
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes
 from core.crypto.RSA import RSACAService
+from api.jwt_utils import get_user_id_from_payload
+from core.services.audit_event import record_audit_event
 
 root_ca_bp = Blueprint('root_ca', __name__, url_prefix='/v1')
 
@@ -45,6 +47,7 @@ def get_root_certificate():
 @root_ca_bp.route("/admin/root/revoke", methods=["POST"])
 def revoke_root_ca():
     """Thu hồi Root CA bằng cách xoá files"""
+    actor_id = get_user_id_from_payload()
     key_path = os.getenv("KEY_PATH_CA", "ca_key.pem")
     cert_path = os.getenv("CERT_PATH_CA", "ca_cert.pem")
     
@@ -57,18 +60,40 @@ def revoke_root_ca():
         deleted = True
         
     if deleted:
+        record_audit_event(
+            "ROOT_CA_REVOKED",
+            actor_id,
+            target_type="root_ca",
+            target_id="system",
+            metadata={"key_path": key_path, "cert_path": cert_path},
+        )
         return jsonify({"success": True, "message": "Root CA has been revoked."}), 200
     else:
+        record_audit_event(
+            "ROOT_CA_REVOKE_NOT_FOUND",
+            actor_id,
+            target_type="root_ca",
+            target_id="system",
+            metadata={"key_path": key_path, "cert_path": cert_path},
+        )
         return jsonify({"success": False, "message": "Root CA not found."}), 404
 
 @root_ca_bp.route("/admin/root/generate", methods=["POST"])
 def generate_root_ca():
     """Tự động sinh Root CA dựa trên thông tin file .env"""
+    actor_id = get_user_id_from_payload()
     rsa_service = RSACAService()
     key_path = os.getenv("KEY_PATH_CA", "ca_key.pem")
     cert_path = os.getenv("CERT_PATH_CA", "ca_cert.pem")
     
     if os.path.exists(cert_path) and os.path.exists(key_path):
+        record_audit_event(
+            "ROOT_CA_CREATE_SKIPPED_EXISTS",
+            actor_id,
+            target_type="root_ca",
+            target_id="system",
+            metadata={"key_path": key_path, "cert_path": cert_path},
+        )
         return jsonify({"success": False, "message": "Root CA already exists."}), 400
         
     try:
@@ -83,7 +108,27 @@ def generate_root_ca():
             
         with open(cert_path, "wb") as f:
             f.write(rsa_service.serialize_cert(cert))
+
+        record_audit_event(
+            "ROOT_CA_CREATED",
+            actor_id,
+            target_type="root_ca",
+            target_id="system",
+            metadata={
+                "key_path": key_path,
+                "cert_path": cert_path,
+                "common_name": common_name,
+                "serial_number": str(cert.serial_number),
+            },
+        )
             
         return jsonify({"success": True, "message": "Khởi tạo Root CA từ ENV thành công."}), 201
     except Exception as e:
+        record_audit_event(
+            "ROOT_CA_CREATE_FAILED",
+            actor_id,
+            target_type="root_ca",
+            target_id="system",
+            metadata={"error": str(e), "key_path": key_path, "cert_path": cert_path},
+        )
         return jsonify({"success": False, "message": str(e)}), 500

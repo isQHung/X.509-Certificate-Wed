@@ -39,7 +39,7 @@ export default function DashboardLayout({
             icon: "🚫",
             path: "/dashboard/admin/crl",
         },
-        { name: "Nhật ký hệ thống", icon: "📝", path: "/dashboard/admin/logs" },
+        { name: "Nhật ký hệ thống", icon: "📝", path: "/dashboard/admin/audit_logs" },
     ];
 
     const userMenu = [

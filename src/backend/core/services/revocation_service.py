@@ -3,6 +3,7 @@ from db.supabase_client import get_supabase_client
 from typing import List, Optional
 from schema.database_schema import Revocation
 from schema.database_schema import Revocation, CRLCreate, CRLEntryCreate
+from core.services.audit_event import normalize_user_id, record_audit_event
 supabase = get_supabase_client()
 class RevocationService:
     
@@ -29,9 +30,10 @@ class RevocationService:
         ]
 
     @staticmethod
-    def approve_revocation(serial_number: str) -> bool:
+    def approve_revocation(serial_number: str, actor_id: str = None) -> bool:
         now = datetime.now(timezone.utc)
         now_iso = now.isoformat()
+        actor_uuid = normalize_user_id(actor_id)
         req_res = supabase.table("revocation_requests") \
             .select("id, certificate_id, reason, status, certificates!inner(serial_number)") \
             .eq("certificates.serial_number", serial_number) \
@@ -52,7 +54,7 @@ class RevocationService:
         supabase.table("revocation_requests").update({
             "status": "approved",
             "approved_at": now.isoformat(),
-            "approved_by": None
+            "approved_by": actor_uuid
         }).eq("id", request_id).execute()
 
         supabase.table("revocations").insert({
@@ -62,14 +64,29 @@ class RevocationService:
             "revoked_at": now_iso
         }).execute()
 
+        record_audit_event(
+            "REVOCATION_REQUEST_APPROVED",
+            actor_id,
+            target_type="revocation_request",
+            target_id=str(request_id),
+            metadata={
+                "certificate_id": str(cert_id),
+                "serial_number": serial_number,
+                "reason": actual_reason,
+                "approved_at": now_iso,
+                "status": "approved",
+            },
+        )
+
         
 
         return True
     
     @staticmethod
-    def reject_revocation(serial_number: str) -> bool:
+    def reject_revocation(serial_number: str, actor_id: str = None) -> bool:
         now = datetime.now(timezone.utc)
         now_iso = now.isoformat()
+        actor_uuid = normalize_user_id(actor_id)
 
 
         req_res = supabase.table("revocation_requests") \
@@ -88,15 +105,29 @@ class RevocationService:
         supabase.table("revocation_requests").update({
             "status": "rejected",
             "approved_at": now_iso, 
-            "approved_by": None
+            "approved_by": actor_uuid
         }).eq("id", request_id).execute()
+
+        record_audit_event(
+            "REVOCATION_REQUEST_REJECTED",
+            actor_id,
+            target_type="revocation_request",
+            target_id=str(request_id),
+            metadata={
+                "serial_number": serial_number,
+                "approved_at": now_iso,
+                "approved_by": actor_uuid,
+                "status": "rejected",
+            },
+        )
             
         return True
 
     @staticmethod
-    def revoke_certificate_by_serial(serial_number: str, reason: str = "Admin Direct Revocation") -> bool:
+    def revoke_certificate_by_serial(serial_number: str, reason: str = "Admin Direct Revocation", actor_id: str = None) -> bool:
         now = datetime.now(timezone.utc)
         now_iso = now.isoformat()
+        actor_uuid = normalize_user_id(actor_id)
 
         # 1. Tìm chứng chỉ
         cert_res = supabase.table("certificates") \
@@ -125,11 +156,40 @@ class RevocationService:
             "revoked_at": now_iso
         }).execute()
 
+        record_audit_event(
+            "CERTIFICATE_REVOKED_DIRECT",
+            actor_id,
+            target_type="certificate",
+            target_id=str(cert_id),
+            metadata={
+                "serial_number": serial_number,
+                "reason": reason,
+                "revoked_at": now_iso,
+                "status": "revoked",
+                "is_direct_admin_action": True,
+            },
+        )
+
         # 4. Tìm và đóng bất kỳ yêu cầu thu hồi nào đang chờ (nếu có)
         supabase.table("revocation_requests").update({
             "status": "approved",
             "approved_at": now_iso,
-            "approved_by": None # Có thể bổ sung actor_id sau
+            "approved_by": actor_uuid
         }).eq("certificate_id", cert_id).eq("status", "pending").execute()
+
+        record_audit_event(
+            "REVOCATION_REQUEST_APPROVED",
+            actor_id,
+            target_type="revocation_request",
+            target_id=str(cert_id),
+            metadata={
+                "serial_number": serial_number,
+                "reason": reason,
+                "approved_at": now_iso,
+                "approved_by": actor_uuid,
+                "status": "approved",
+                "source": "direct_revocation",
+            },
+        )
 
         return True

@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify
 from core.services.revocation_service import RevocationService
+from api.jwt_utils import get_user_id_from_payload
 
 # Khởi tạo Blueprint với prefix chuẩn
 revoke_bp = Blueprint('admin_revoke', __name__, url_prefix='/v1/admin/revoke')
@@ -27,7 +28,8 @@ def approve_revocation(serial_number):
     API Phê duyệt yêu cầu thu hồi chứng chỉ
     """
     try:
-        result = RevocationService.approve_revocation(serial_number)
+        actor_id = get_user_id_from_payload()
+        result = RevocationService.approve_revocation(serial_number, actor_id=actor_id)
         
         return jsonify(result), 200
         
@@ -50,7 +52,8 @@ def reject_revocation(serial_number):
     API Từ chối yêu cầu thu hồi chứng chỉ
     """
     try:
-        result = RevocationService.reject_revocation(serial_number)
+        actor_id = get_user_id_from_payload()
+        result = RevocationService.reject_revocation(serial_number, actor_id=actor_id)
         
         return jsonify(result), 200
         
@@ -73,7 +76,8 @@ def revoke_certificate_direct(serial_number):
     API Thu hồi trực tiếp chứng chỉ (Admin only)
     """
     try:
-        RevocationService.revoke_certificate_by_serial(serial_number)
+        actor_id = get_user_id_from_payload()
+        RevocationService.revoke_certificate_by_serial(serial_number, actor_id=actor_id)
         
         return jsonify({
             "success": True,
