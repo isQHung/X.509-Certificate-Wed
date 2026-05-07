@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from core.services.cert_request import create_csr, cancel_csr
+from core.services.cert_request import create_csr, cancel_csr, get_list_csr_by_user_id
 from core.services.csr_generator import generate_csr
 from api.jwt_utils import get_user_id_from_payload
 customer_bp = Blueprint("customer", __name__, url_prefix="/v1")
@@ -34,4 +34,12 @@ def cancel_cert_request(req_id):
         return jsonify({"message": "CSR cancelled successfully", "request_id": res}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 400
-        
+
+@customer_bp.route("/cert_request/list", methods=["GET"])
+def list_cert_request():
+    try:
+        user_id = get_user_id_from_payload()
+        res = get_list_csr_by_user_id(user_id=user_id)
+        return jsonify({"message": "CSR cancelled successfully", "list_csr": res}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
