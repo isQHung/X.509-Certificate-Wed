@@ -1,69 +1,119 @@
-Để chạy được code: 
-    cd src/frontend
-    pnpm install
-    .env.local tại thư mục src/frontend/ và copy đoạn code 
-    pnpm dev
+# Frontend - Next.js Application
 
-What was done:
-    Tích hợp Firebase Client SDK (Auth) và Firebase Admin SDK (Verify JWT).
+This is the frontend for the X.509 Certificate Management System. It is built with Next.js, React, TypeScript, Supabase client libraries, and a small set of UI helpers for authentication, API calls, notifications, and file downloads.
 
-    Middleware bảo mật: Xây dựng Middleware tại src/frontend/middleware.ts để chặn Route dựa trên ID Token (JWT) và Role từ Cookie.
+## What this app does
 
-    RBAC (Role-Based Access Control): Phân quyền rõ rệt giữa ADMIN và CUSTOMER. Lưu trữ bền vững (Persistence) trên Firestore Database.
+- Provides the customer and admin user interface for the certificate lifecycle.
+- Handles sign in, sign up, logout, and session-based route protection.
+- Calls the Flask backend for certificate requests, approvals, revocations, and related workflows.
+- Uses role-based routing so admin-only pages stay separated from customer pages.
 
-    Profile Management: Tính năng đổi mật khẩu yêu cầu xác thực lại mật khẩu cũ (Re-authentication) theo chuẩn bảo mật.
+## Tech Stack
 
-    Cấu trúc thư mục: Tổ chức lại code vào /lib (logic Firebase), /schema (định nghĩa interface) và Route Grouping (auth).
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 16.1.7 |
+| UI | React 19.2.3, TypeScript, Tailwind CSS 4 |
+| Auth/Data Client | Supabase JS, Supabase SSR |
+| API | Axios |
+| Session/Cookies | `js-cookie`, `jose` |
+| UX Utilities | `react-toastify`, `file-saver`, `lucide-react` |
+| Testing | Playwright |
 
-Testing:
-    Case 1: Đăng ký & Persistence
-        Bước 1: Truy cập /register, đăng ký một email mới (VD: test@gmail.com).
+## Prerequisites
 
-        Bước 2: Kiểm tra Firestore Collection users.
+- Node.js 20+ recommended
+- `pnpm`
+- A configured backend service running on port 5000
 
-        Expected: Tài khoản được tạo thành công trên Auth và có bản ghi tương ứng trong Firestore với role mặc định là CUSTOMER
-    
-    Case 2: Kiểm tra trùng Email (Error 400)
-        Bước 1: Dùng lại email test@gmail.com để đăng ký lần nữa.
+## Setup
 
-        Expected: Hệ thống báo lỗi "400 Email already used" (Bắt lỗi auth/email-already-in-use).
+1. Install dependencies.
 
-    Case 3: Phân quyền API - Forbidden (403)
-        Bước 1: Đăng nhập bằng tài khoản CUSTOMER. (1@1.com / 123456)
+   ```bash
+   cd src/frontend
+   pnpm install
+   ```
 
-        Bước 2: Dùng Postman hoặc gọi trực tiếp API /api/admin/check (mở console trong F12).
+2. Create your local environment file.
 
-        Expected: Trả về 403 Forbidden vì role không phải Admin
+   ```bash
+   cp .env.example .env.local
+   ```
 
-    Case 4: Phân quyền API - Success (200)
-        Bước 1: Đăng nhập bằng tài khoản ADMIN (Email admin@admin.com). Pass: 123456
+3. Fill in the required values.
 
-        Bước 2: Truy cập /dashboard/admin/users hoặc gọi API /api/admin/check (mở console trong F12).
+   Minimum variables used by the app:
 
-        Expected: Trả về 200 OK và truy cập được giao diện quản lý.
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `NEXT_PUBLIC_API_BASE_URL`
+   - `JWT_SECRET_KEY`
 
-    Case 5: Đổi mật khẩu (User Profile)
-        Mục tiêu: Xác nhận người dùng có thể tự cập nhật mật khẩu an toàn.
+   If you use the admin server route, also provide `SUPABASE_SERVICE_ROLE_KEY`.
 
-        Các bước:
+## Run Locally
 
-        Truy cập /dashboard/profile/change-password.
+```bash
+pnpm dev
+```
 
-        Nhập mật khẩu hiện tại và mật khẩu mới (ít nhất 6 ký tự).
+The app starts on `http://localhost:3000`.
 
-        Nhấn Cập nhật.
+Other useful commands:
 
-        Kết quả mong đợi: Hệ thống báo thành công. Đăng xuất và đăng nhập lại bằng mật khẩu mới thành công.
+```bash
+pnpm build
+pnpm start
+pnpm lint
+pnpm test:e2e
+```
 
-    Case 6: Cấp quyền người dùng (Admin Management)
-        Mục tiêu: Xác nhận Admin có thể thay đổi quyền hạn (RBAC) của người dùng khác.
+## Environment Notes
 
-        Các bước:
+- `NEXT_PUBLIC_API_BASE_URL` is used by the frontend API clients. If it is missing, the code falls back to `http://localhost:5000`.
+- The auth and middleware flow reads session cookies and JWT data to protect routes.
+- The backend must be reachable from the browser before most pages can complete their workflows.
 
-        Đăng nhập tài khoản Admin, truy cập /dashboard/admin/users.
+## Project Structure
 
-        Tìm một User đang là CUSTOMER, nhấn nút "Đổi thành Admin".
+- `app/` - route groups, pages, and API routes
+- `components/` - reusable UI components
+- `context/` - React context such as loading state
+- `lib/` - API clients, Supabase helpers, and shared frontend logic
+- `public/` - static assets
+- `schema/` - frontend-facing TypeScript data structures
+- `proxy.ts` - request-time route protection and token checks
 
-        Kiểm tra trực tiếp trên Firebase Firestore Console.
+## Main Workflows
 
-        Kết quả mong đợi: Trường role của User đó trong Firestore chuyển từ "CUSTOMER" sang "ADMIN".
+- Customer registration and login
+- Admin and customer dashboard routing
+- Certificate request submission and status tracking
+- Certificate download and related file actions
+- Password change with re-authentication
+- Admin-only checks and management actions
+
+## Testing
+
+Recommended checks for local development:
+
+1. `pnpm lint`
+2. `pnpm test:e2e`
+3. Manual smoke test: open `/register`, sign in, and verify the dashboard can reach the backend
+
+If a test fails, first confirm that `NEXT_PUBLIC_API_BASE_URL` points to the running backend and that the required Supabase variables are present.
+
+## Troubleshooting
+
+- If the app cannot call the backend, confirm the Flask service is running on port 5000.
+- If auth or protected routes fail, recheck the cookie/JWT secrets in `.env.local`.
+- If admin routes fail in development, make sure the Supabase service role key is available to the server-side route code.
+
+## Related Docs
+
+- [Backend README](../backend/README.md)
+- [Backend API notes](../backend/api.md)
+- [Project requirements](../../docs/requirements/REAME.md)
+- [Database design notes](../../docs/design/db-design/ER-spec.md)
