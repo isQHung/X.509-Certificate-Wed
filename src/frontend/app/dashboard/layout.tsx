@@ -118,9 +118,9 @@ export default function DashboardLayout({
 
                     <div className="p-4 border-t border-slate-200">
                         <Link
-                            href="/dashboard/change-password"
+                            href="/change-password"
                             className={`flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-lg transition-all ${
-                                pathname === "/dashboard/change-password"
+                                pathname === "/change-password"
                                     ? "bg-indigo-50 text-indigo-600 shadow-sm"
                                     : "text-slate-600 hover:bg-slate-50 hover:text-indigo-600"
                             }`}

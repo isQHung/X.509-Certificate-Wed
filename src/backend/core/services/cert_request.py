@@ -59,3 +59,11 @@ def cancel_csr(req_id, actor_id=None):
     
     repo.delete_csr(req_id)
     return req_id
+
+def get_list_csr_by_user_id(user_id):
+    list_csr = repo.get_csr_by_user_id(user_id=user_id)
+
+    if not list_csr:
+        raise ValueError(f"CSR with USER_ID {user_id} not found")
+    
+    return list_csr

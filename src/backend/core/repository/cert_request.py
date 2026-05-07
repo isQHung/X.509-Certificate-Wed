@@ -13,6 +13,13 @@ class CertificateRequestRepository:
             return None
         return data[0]
     
+    def get_csr_by_user_id(self, user_id):
+        res = self.db.table(self.req_table).select("*").eq("user_id", user_id).limit(5).execute()
+        data = res.data
+        if not data:
+            return None
+        return data
+    
     def insert_csr(self, csr_req):
         res = self.db.table(self.req_table).insert(csr_req).execute()
         return res.data[0]['id']

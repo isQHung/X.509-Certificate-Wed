@@ -9,6 +9,7 @@ export default function DashboardPage() {
     const [role, setRole] = useState<string>(() =>
         (localStorage.getItem("userRole") || "CUSTOMER").toUpperCase(),
     );
+    const [userId, setUserId] = useState<string>(() => (localStorage.getItem("userId") || ""));
     const [stats, setStats] = useState<any>(null);
     const [recentRequests, setRecentRequests] = useState<any[]>([]);
     const [certCount, setCertCount] = useState<number | null>(null);
@@ -22,8 +23,8 @@ export default function DashboardPage() {
         const loadData = async () => {
             try {
                 // Get current user (may be null for unauthenticated)
-                const { data: userData } = await supabase.auth.getUser();
-                const userId = userData?.user?.id || null;
+                // const { data: userData } = await supabase.auth.getUser();
+                // const userId = userData?.user?.id || null;
 
                 if (role === "ADMIN") {
                     // Count total requests (CSRs)
@@ -73,14 +74,9 @@ export default function DashboardPage() {
 
                     if (userId) {
 
-                        const { data: reqs } = await supabase
-                            .from("certificate_requests")
-                            .select("id, common_name, created_at, status")
-                            .eq("user_id", userId)
-                            .order("created_at", { ascending: false })
-                            .limit(5);
-
-                        setRecentRequests(reqs || []);
+                        const reqs = await api.get("/api/v1/cert_request/list");
+                        console.log("hi")
+                        setRecentRequests(reqs.data.list_csr || []);
                     }
                 }
             } catch (err) {
