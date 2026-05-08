@@ -101,14 +101,62 @@ Backend default URL: `http://localhost:5000`
 
 ### 3. Docker Compose
 
+**Before running Docker Compose, set the DATABASE_URL environment variable:**
+
 ```bash
+cp .env.example .env
+# Edit .env and add your actual password to DATABASE_URL
+export $(cat .env | xargs)
+
 docker compose up --build
 ```
 
-This starts both services with the default ports mapped as:
+Alternatively, pass DATABASE_URL directly:
+
+```bash
+DATABASE_URL='postgresql://postgres.ypgjagmfsksnvhhxtkfd:YOUR-PASSWORD@aws-1-ap-northeast-1.pooler.supabase.com:5432/postgres' docker compose up --build
+```
+
+This starts all services with the default ports mapped as:
 
 - frontend: `3000`
 - backend: `5000`
+
+The migration service will run automatically before backend starts.
+
+## Database Migrations
+
+Schema migrations are managed with `scripts/migration.sh` and tracked in PostgreSQL table `public.schema_migrations`.
+
+**Setup for local migration runs:**
+
+```bash
+# Set your Supabase connection (from .env or export directly)
+export DATABASE_URL='postgresql://postgres.ypgjagmfsksnvhhxtkfd:[YOUR-PASSWORD]@aws-1-ap-northeast-1.pooler.supabase.com:5432/postgres'
+
+# Initialize migration metadata table
+./scripts/migration.sh init
+
+# Apply pending migrations
+./scripts/migration.sh migrate
+
+# Validate checksums and migration integrity
+./scripts/migration.sh validate
+
+# Show migration status and pending files
+./scripts/migration.sh status
+
+# Baseline existing DB up to a known version
+./scripts/migration.sh baseline 018
+```
+
+For rollback, provide undo files with naming `U###__description.sql` and run:
+
+```bash
+./scripts/migration.sh undo
+```
+
+See full command reference in `scripts/README.md`.
 
 ## Environment Variables
 
