@@ -37,7 +37,6 @@ The system supports the certificate lifecycle from CSR submission to approval, i
 │   ├── frontend/           # Next.js application, UI, auth flow, frontend tests
 │   └── shared/             # Shared schemas and helpers
 ├── docker-compose.yml      # Local multi-service startup
-├── package.json            # Root-level JS dependencies used by shared tooling
 └── README.md               # Project overview and setup guide
 ```
 
