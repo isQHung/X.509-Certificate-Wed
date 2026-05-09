@@ -1,4 +1,3 @@
-V009__audit_logs.sql
 CREATE TABLE audit_logs (
     id BIGSERIAL PRIMARY KEY,
 
