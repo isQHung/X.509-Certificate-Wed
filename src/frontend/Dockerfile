@@ -1,7 +1,7 @@
 # Base
-FROM node:20-alpine AS base
+FROM node:23-alpine AS base
 WORKDIR /app
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@10.17.1 --activate
 
 # Install deps
 FROM base AS deps
@@ -22,7 +22,7 @@ COPY . .
 RUN pnpm build
 
 # Production (standalone)
-FROM node:20-alpine AS runner
+FROM node:23-alpine AS runner
 WORKDIR /app
 
 # ENV NODE_ENV=production
