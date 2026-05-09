@@ -13,7 +13,7 @@ Create or update `src/backend/.env` with your database connection:
 
 ```bash
 # src/backend/.env
-DATABASE_URL='postgresql://postgres:password@localhost:5432/certificate_db'
+DATABASE_URL='postgresql://<user>:<pass>@<host>:5432/<dbname>'
 KEY_PATH_CA='./secrets/ca_key.pem'
 CERT_PATH_CA='./secrets/ca_cert.pem'
 JWT_SECRET_KEY='your-super-secret-key-change-this'
@@ -31,7 +31,7 @@ SUPABASE_SERVICE_ROLE_KEY='your-service-role-key'
 1. Set DATABASE_URL in your shell:
 
 ```bash
-export DATABASE_URL='postgresql://postgres:password@localhost:5432/certificate_db'
+export DATABASE_URL='postgresql://<user>:<pass>@<host>:5432/<dbname>'
 ```
 
 2. Run the migration script:
@@ -97,7 +97,7 @@ If using Docker Compose, the `db-migrate` service runs migrations automatically 
 
 ```bash
 # from repo root
-DATABASE_URL='postgresql://user:pass@postgres:5432/cert_db' docker compose up --build
+DATABASE_URL='postgresql://<user>:<pass>@<host>:5432/<dbname>' docker compose up --build
 ```
 
 The migration completes, then backend and frontend services start on ports 5000 and 3000 respectively.

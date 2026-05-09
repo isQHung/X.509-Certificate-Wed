@@ -29,7 +29,7 @@ cp src/backend/.env.example src/backend/.env
 
 ```bash
 # from repo root
-DATABASE_URL='postgresql://user:password@db-host:5432/postgres' docker compose up --build
+DATABASE_URL='postgresql://<user>:<pass>@<host>:5432/<dbname>' docker compose up --build
 ```
 
 3. Backend: `http://localhost:5000` ; Frontend: `http://localhost:3000`.
